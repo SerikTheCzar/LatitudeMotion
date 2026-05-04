@@ -1,0 +1,307 @@
+{
+  "session_id": "train-20260424-192311-4f7de4",
+  "frames": 543,
+  "fps": 30.0,
+  "start_t": 0.0,
+  "end_t": 18.066666666666666,
+  "duration_sec": 18.1,
+  "calibration_hash": "1446510d19114473ee9a5421f16ff9b5624313ad",
+  "romp_backend": "pose2d",
+  "pose2d_backend": "pose2d",
+  "smpl_model_path": "/app/SMPL_NEUTRAL.pkl",
+  "pose_backend_active": "stereo_triangulated_v1",
+  "video": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/input/recording.mp4",
+  "frame_times": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/session.frame_times.jsonl",
+  "features": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/features.jsonl",
+  "pose_debug": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/pose_debug.jsonl",
+  "body_state_upper_body": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/body_state.upper_body.live_causal.jsonl",
+  "labels": [
+    "idle",
+    "bicep_curl",
+    "overhead_press",
+    "lateral_raise",
+    "front_raise",
+    "overhead_tricep_extension",
+    "squat",
+    "barbell_bicep_curl"
+  ],
+  "video_scale": 1.0,
+  "git_commit": "unknown",
+  "created_utc": "2026-04-24T19:24:46Z",
+  "pose_backend_raw": "stereo_triangulated_v1",
+  "stereo_reprocess": {
+    "pose_debug_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/pose_debug.jsonl",
+    "features_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/features.jsonl",
+    "frame_times_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/session.frame_times.jsonl",
+    "frame_count": 543,
+    "calibration_hash": "1446510d19114473ee9a5421f16ff9b5624313ad",
+    "reprojection_mean_px": 26.5198,
+    "reprojection_p95_px": 28.9458,
+    "camera_b_participating_ratio": 1.0,
+    "camera_a_detected_ratio": 1.0,
+    "camera_b_detected_ratio": 1.0,
+    "processing_seconds": 21.716,
+    "source": "stereo_triangulated_v1"
+  },
+  "features_smpl": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/features.smpl.jsonl",
+  "pose_debug_smpl": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/pose_debug.smpl.jsonl",
+  "smpl_debug": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/smpl_debug.jsonl",
+  "smpl_video": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/preview/training-smpl.mp4",
+  "smpl_reprocess": {
+    "pose_debug_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/pose_debug.smpl.jsonl",
+    "features_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/features.smpl.jsonl",
+    "smpl_debug_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/smpl_debug.jsonl",
+    "preview_video_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/preview/training-smpl.mp4",
+    "frame_count": 543,
+    "fit_error_mean": 0.049456,
+    "fit_error_p95": 0.080838,
+    "used_device": "cuda:0",
+    "preview_rendered": true,
+    "timings": {
+      "fit_target_seconds": 0.03,
+      "model_seconds": 0.106,
+      "shape_fit_seconds": 1.305,
+      "sequence_fit_seconds": 6.287,
+      "smpl_forward_seconds": 0.023,
+      "projection_seconds": 0.103,
+      "write_artifacts_seconds": 0.188,
+      "preview_seconds": 4.805,
+      "total_seconds": 12.851
+    }
+  },
+  "body_state_upper_body_smpl": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/body_state.upper_body.smpl.live_causal.jsonl",
+  "body_state_representation_version_smpl": "body_state_v3_upper_body_live_causal",
+  "body_state_reprocess_smpl": {
+    "output_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/body_state.upper_body.smpl.live_causal.jsonl",
+    "source_pose_debug_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/pose_debug.smpl.jsonl",
+    "frame_count": 543,
+    "representation_version": "body_state_v3_upper_body_live_causal",
+    "observed_upper_joint_mean": 6.9853,
+    "held_joint_fraction_mean": 0.0014
+  },
+  "motion_embedding_reviews": {
+    "run-motion_embedding-20260422-023324-1d7016": {
+      "run_id": "run-motion_embedding-20260422-023324-1d7016",
+      "trace_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/motion_embedding.review.run-motion_embedding-20260422-023324-1d7016.json",
+      "representation_version": "body_state_v3_upper_body_live_causal",
+      "row_count": 182,
+      "duration_sec": 18.067,
+      "source_pose_debug_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/pose_debug.smpl.jsonl",
+      "prototype_label_counts": {
+        "setup_motion": 60,
+        "true_idle": 31,
+        "elbow_flexion_up": 11,
+        "top_turn": 28,
+        "elbow_flexion_down": 11,
+        "bottom_dwell": 6,
+        "postamble_motion": 1,
+        "arm_raise_abduction_up": 17,
+        "arm_raise_abduction_down": 12,
+        "bottom_turn": 5
+      },
+      "smoothed_label_counts": {
+        "setup_motion": 59,
+        "true_idle": 29,
+        "elbow_flexion_up": 11,
+        "elbow_flexion_down": 21,
+        "top_turn": 23,
+        "bottom_dwell": 3,
+        "arm_raise_abduction_up": 17,
+        "arm_raise_abduction_down": 17,
+        "bottom_turn": 2
+      },
+      "aux_label_counts": {
+        "true_idle": 82,
+        "setup_motion": 6,
+        "elbow_flexion_down": 46,
+        "elbow_flexion_up": 1,
+        "bottom_turn": 10,
+        "arm_raise_abduction_up": 10,
+        "arm_raise_abduction_down": 13,
+        "arm_raise_flexion_down": 14
+      },
+      "decoded_label_counts": {
+        "setup_motion": 35,
+        "true_idle": 51,
+        "elbow_flexion_up": 16,
+        "elbow_flexion_down": 20,
+        "top_turn": 14,
+        "bottom_dwell": 3,
+        "arm_raise_abduction_up": 23,
+        "arm_raise_abduction_down": 14,
+        "bottom_turn": 5,
+        "postamble_motion": 1
+      },
+      "regime_label_counts": {
+        "setup_motion": 35,
+        "true_idle": 51,
+        "active_structured_motion": 95,
+        "postamble_motion": 1
+      },
+      "phase_label_counts": {
+        "unknown_transition": 36,
+        "none": 51,
+        "concentric": 39,
+        "eccentric": 34,
+        "top_turn": 14,
+        "bottom_dwell": 3,
+        "bottom_turn": 5
+      },
+      "family_label_counts": {
+        "curl_family": 70,
+        "none": 51,
+        "raise_family": 61
+      },
+      "decoded_rep_count": 9,
+      "decoded_rep_counts_by_family": {
+        "curl_family": 4,
+        "raise_family": 5
+      },
+      "decoder_meta": {
+        "decoder": "offline_sequence_v2",
+        "state_count": 17,
+        "state_support": {
+          "curl:setup": 27,
+          "true_idle": 51,
+          "curl:concentric": 16,
+          "curl:top_turn": 6,
+          "curl:eccentric": 13,
+          "curl:bottom_turn": 1,
+          "curl:bottom_dwell": 6,
+          "curl:postamble": 1,
+          "raise:concentric": 23,
+          "raise:top_turn": 10,
+          "raise:eccentric": 14,
+          "raise:bottom_turn": 5,
+          "raise:postamble": 1,
+          "raise:setup": 8
+        },
+        "family_support": {
+          "curl_family": 70,
+          "raise_family": 61
+        },
+        "rep_count": 10,
+        "rep_count_by_family": {
+          "curl_family": 5,
+          "raise_family": 5
+        },
+        "curl_extension_rescue_count": 20
+      }
+    }
+  },
+  "motion_embedding_review_active_run_id": "run-motion_embedding-20260422-023324-1d7016",
+  "motion_embedding_review": {
+    "run_id": "run-motion_embedding-20260422-023324-1d7016",
+    "trace_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/motion_embedding.review.run-motion_embedding-20260422-023324-1d7016.json",
+    "representation_version": "body_state_v3_upper_body_live_causal",
+    "row_count": 182,
+    "duration_sec": 18.067,
+    "source_pose_debug_path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/pose_debug.smpl.jsonl",
+    "prototype_label_counts": {
+      "setup_motion": 60,
+      "true_idle": 31,
+      "elbow_flexion_up": 11,
+      "top_turn": 28,
+      "elbow_flexion_down": 11,
+      "bottom_dwell": 6,
+      "postamble_motion": 1,
+      "arm_raise_abduction_up": 17,
+      "arm_raise_abduction_down": 12,
+      "bottom_turn": 5
+    },
+    "smoothed_label_counts": {
+      "setup_motion": 59,
+      "true_idle": 29,
+      "elbow_flexion_up": 11,
+      "elbow_flexion_down": 21,
+      "top_turn": 23,
+      "bottom_dwell": 3,
+      "arm_raise_abduction_up": 17,
+      "arm_raise_abduction_down": 17,
+      "bottom_turn": 2
+    },
+    "aux_label_counts": {
+      "true_idle": 82,
+      "setup_motion": 6,
+      "elbow_flexion_down": 46,
+      "elbow_flexion_up": 1,
+      "bottom_turn": 10,
+      "arm_raise_abduction_up": 10,
+      "arm_raise_abduction_down": 13,
+      "arm_raise_flexion_down": 14
+    },
+    "decoded_label_counts": {
+      "setup_motion": 35,
+      "true_idle": 51,
+      "elbow_flexion_up": 16,
+      "elbow_flexion_down": 20,
+      "top_turn": 14,
+      "bottom_dwell": 3,
+      "arm_raise_abduction_up": 23,
+      "arm_raise_abduction_down": 14,
+      "bottom_turn": 5,
+      "postamble_motion": 1
+    },
+    "regime_label_counts": {
+      "setup_motion": 35,
+      "true_idle": 51,
+      "active_structured_motion": 95,
+      "postamble_motion": 1
+    },
+    "phase_label_counts": {
+      "unknown_transition": 36,
+      "none": 51,
+      "concentric": 39,
+      "eccentric": 34,
+      "top_turn": 14,
+      "bottom_dwell": 3,
+      "bottom_turn": 5
+    },
+    "family_label_counts": {
+      "curl_family": 70,
+      "none": 51,
+      "raise_family": 61
+    },
+    "decoded_rep_count": 9,
+    "decoded_rep_counts_by_family": {
+      "curl_family": 4,
+      "raise_family": 5
+    },
+    "decoder_meta": {
+      "decoder": "offline_sequence_v2",
+      "state_count": 17,
+      "state_support": {
+        "curl:setup": 27,
+        "true_idle": 51,
+        "curl:concentric": 16,
+        "curl:top_turn": 6,
+        "curl:eccentric": 13,
+        "curl:bottom_turn": 1,
+        "curl:bottom_dwell": 6,
+        "curl:postamble": 1,
+        "raise:concentric": 23,
+        "raise:top_turn": 10,
+        "raise:eccentric": 14,
+        "raise:bottom_turn": 5,
+        "raise:postamble": 1,
+        "raise:setup": 8
+      },
+      "family_support": {
+        "curl_family": 70,
+        "raise_family": 61
+      },
+      "rep_count": 10,
+      "rep_count_by_family": {
+        "curl_family": 5,
+        "raise_family": 5
+      },
+      "curl_extension_rescue_count": 20
+    }
+  },
+  "workout_demo_analysis": {
+    "path": "/app/artifacts/training_sessions/train-20260424-192311-4f7de4/workout_demo_analysis.run-motion_embedding-20260422-023324-1d7016.json",
+    "run_id": "run-motion_embedding-20260422-023324-1d7016",
+    "total_rep_count": 10,
+    "workout_count": 2
+  }
+}

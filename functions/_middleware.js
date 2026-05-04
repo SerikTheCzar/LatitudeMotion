@@ -1,0 +1,33 @@
+import {
+  authConfig,
+  authorizeUrl,
+  clearCookieHeader,
+  cookieHeader,
+  parseCookies,
+  pkceChallenge,
+  randomUrlString,
+  verifySession,
+} from "./_shared/cognito.js";
+
+const passthroughPrefixes = ["/auth/"];
+
+export async function onRequest(context) {
+  const { request, next } = context;
+  const url = new URL(request.url);
+  if (passthroughPrefixes.some((prefix) => url.pathname.startsWith(prefix))) return next();
+
+  const secure = url.protocol === "https:";
+  const cookies = parseCookies(request);
+  const claims = await verifySession(cookies[authConfig.sessionCookie]).catch(() => null);
+  if (claims) return next();
+
+  const verifier = randomUrlString(64);
+  const state = randomUrlString(32);
+  const challenge = await pkceChallenge(verifier);
+  const response = Response.redirect(authorizeUrl(request, state, challenge), 302);
+  response.headers.append("Set-Cookie", cookieHeader(authConfig.verifierCookie, verifier, { maxAge: 600, secure }));
+  response.headers.append("Set-Cookie", cookieHeader(authConfig.stateCookie, state, { maxAge: 600, secure }));
+  response.headers.append("Set-Cookie", cookieHeader(authConfig.returnCookie, `${url.pathname}${url.search}${url.hash}`, { maxAge: 600, secure }));
+  response.headers.append("Set-Cookie", clearCookieHeader(authConfig.sessionCookie, secure));
+  return response;
+}
