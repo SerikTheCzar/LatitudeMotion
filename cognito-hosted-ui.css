@@ -1,0 +1,68 @@
+.background-customizable {
+  background-color: #060a11 !important;
+}
+
+.banner-customizable {
+  background-color: #060a11 !important;
+  padding: 0;
+}
+
+.logo-customizable {
+  max-width: 88px;
+  max-height: 88px;
+  margin-bottom: 18px;
+}
+
+.label-customizable {
+  color: #9aabba !important;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.inputField-customizable {
+  height: 48px;
+  border: 1px solid #2c4358 !important;
+  border-radius: 16px !important;
+  background-color: #182535 !important;
+  color: #f4f8ff !important;
+  box-shadow: none !important;
+}
+
+.submitButton-customizable {
+  height: 48px;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background-color: #5bdcff !important;
+  color: #061014 !important;
+  font-weight: 900;
+  box-shadow: 0 12px 30px #0b3a4a !important;
+}
+
+.redirect-customizable {
+  color: #9aabba !important;
+}
+
+.legalText-customizable {
+  color: #9aabba !important;
+}
+
+.textDescription-customizable {
+  color: #9aabba !important;
+}
+
+.idpDescription-customizable {
+  color: #9aabba !important;
+}
+
+.errorMessage-customizable {
+  color: #9aabba !important;
+}
+
+.errorMessage-customizable {
+  border: 1px solid #ff6b6b;
+  border-radius: 14px;
+  background-color: #2b1820;
+  padding: 10px 12px;
+}
