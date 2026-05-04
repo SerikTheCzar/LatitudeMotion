@@ -1,20 +1,24 @@
 .background-customizable {
-  background-color: #060a11 !important;
+  background-color: #ffffff !important;
 }
 
 .banner-customizable {
-  background-color: #060a11 !important;
+  background-color: #ffffff !important;
+  height: 0;
+  max-height: 0;
+  overflow: hidden;
   padding: 0;
 }
 
 .logo-customizable {
-  max-width: 88px;
-  max-height: 88px;
-  margin-bottom: 18px;
+  display: none;
+  max-width: 0;
+  max-height: 0;
+  margin: 0;
 }
 
 .label-customizable {
-  color: #9aabba !important;
+  color: #63635f !important;
   font-size: 12px;
   font-weight: 900;
   letter-spacing: 2px;
@@ -22,47 +26,47 @@
 }
 
 .inputField-customizable {
-  height: 48px;
-  border: 1px solid #2c4358 !important;
-  border-radius: 16px !important;
-  background-color: #182535 !important;
-  color: #f4f8ff !important;
+  height: 44px;
+  border: 1px solid #d5d5cf !important;
+  border-radius: 0 !important;
+  background-color: #fbfbfa !important;
+  color: #171717 !important;
   box-shadow: none !important;
 }
 
 .submitButton-customizable {
-  height: 48px;
-  border: 0 !important;
-  border-radius: 14px !important;
-  background-color: #5bdcff !important;
-  color: #061014 !important;
+  height: 44px;
+  border: 1px solid #333333 !important;
+  border-radius: 0 !important;
+  background-color: #333333 !important;
+  color: #ffffff !important;
   font-weight: 900;
-  box-shadow: 0 12px 30px #0b3a4a !important;
+  box-shadow: none !important;
 }
 
 .redirect-customizable {
-  color: #9aabba !important;
+  color: #d4542f !important;
 }
 
 .legalText-customizable {
-  color: #9aabba !important;
+  color: #63635f !important;
 }
 
 .textDescription-customizable {
-  color: #9aabba !important;
+  color: #171717 !important;
 }
 
 .idpDescription-customizable {
-  color: #9aabba !important;
+  color: #63635f !important;
 }
 
 .errorMessage-customizable {
-  color: #9aabba !important;
+  color: #b23b2b !important;
 }
 
 .errorMessage-customizable {
-  border: 1px solid #ff6b6b;
-  border-radius: 14px;
-  background-color: #2b1820;
+  border: 1px solid #b23b2b;
+  border-radius: 0;
+  background-color: #fff8f4;
   padding: 10px 12px;
 }
