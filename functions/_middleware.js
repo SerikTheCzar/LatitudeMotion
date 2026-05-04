@@ -10,7 +10,7 @@ import {
   verifySession,
 } from "./_shared/cognito.js";
 
-const passthroughPrefixes = ["/auth/"];
+const passthroughPrefixes = ["/auth/", "/api/"];
 
 export async function onRequest(context) {
   try {
