@@ -32,6 +32,19 @@ export function randomUrlString(byteLength = 32) {
   return base64Url(bytes);
 }
 
+export function packOAuthState(payload) {
+  return base64Url(encoder.encode(JSON.stringify(payload)));
+}
+
+export function unpackOAuthState(value) {
+  if (!value) return null;
+  try {
+    return JSON.parse(new TextDecoder().decode(decodeBase64Url(value)));
+  } catch {
+    return null;
+  }
+}
+
 export async function pkceChallenge(verifier) {
   const digest = await crypto.subtle.digest("SHA-256", encoder.encode(verifier));
   return base64Url(new Uint8Array(digest));

@@ -3,6 +3,7 @@ import {
   authorizeUrl,
   clearCookieHeader,
   cookieHeader,
+  packOAuthState,
   parseCookies,
   pkceChallenge,
   randomUrlString,
@@ -23,15 +24,17 @@ export async function onRequest(context) {
     if (claims) return next();
 
     const verifier = randomUrlString(64);
-    const state = randomUrlString(32);
+    const stateNonce = randomUrlString(32);
+    const returnTo = `${url.pathname}${url.search}${url.hash}`;
+    const state = packOAuthState({ n: stateNonce, v: verifier, r: returnTo });
     const challenge = await pkceChallenge(verifier);
     const response = new Response(null, {
       status: 302,
       headers: { Location: authorizeUrl(request, state, challenge) },
     });
     response.headers.append("Set-Cookie", cookieHeader(authConfig.verifierCookie, verifier, { maxAge: 600, secure }));
-    response.headers.append("Set-Cookie", cookieHeader(authConfig.stateCookie, state, { maxAge: 600, secure }));
-    response.headers.append("Set-Cookie", cookieHeader(authConfig.returnCookie, `${url.pathname}${url.search}${url.hash}`, { maxAge: 600, secure }));
+    response.headers.append("Set-Cookie", cookieHeader(authConfig.stateCookie, stateNonce, { maxAge: 600, secure }));
+    response.headers.append("Set-Cookie", cookieHeader(authConfig.returnCookie, returnTo, { maxAge: 600, secure }));
     response.headers.append("Set-Cookie", clearCookieHeader(authConfig.sessionCookie, secure));
     return response;
   } catch (error) {
