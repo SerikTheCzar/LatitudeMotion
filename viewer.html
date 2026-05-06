@@ -2074,7 +2074,7 @@
       }
 
       .angle-track {
-        background: rgba(194, 65, 12, 0.035);
+        background: rgba(11, 114, 185, 0.035);
       }
 
       .quality-track {
@@ -2399,7 +2399,7 @@
                   <strong id="reviewAngleValue">-- deg</strong>
                   <span id="reviewAngleDetail">Move into an active segment.</span>
                 </div>
-                <span class="shortcut-help">Use Add Note in the viewer for charting. Bottom tracks show angle, quality, and saved note ranges.</span>
+                <span class="shortcut-help">Use Add Note in the viewer for charting. Bottom tracks show motion intensity, quality, and saved note ranges.</span>
               </div>
               <div id="timeline" class="timeline" aria-label="Clinical review timeline">
                 <div class="timeline-track timeline-ruler">
@@ -2409,7 +2409,7 @@
                   <span class="track-label">workouts</span>
                 </div>
                 <div class="timeline-track">
-                  <span class="track-label">angle</span>
+                  <span class="track-label">motion</span>
                   <canvas id="timelineAngleTrack" class="angle-track"></canvas>
                 </div>
                 <div class="timeline-track">
@@ -2673,6 +2673,7 @@
         annotationDraft: { start: null, end: null },
         romMode: null,
         comparisons: [],
+        motionIntensitySeries: [],
         selectedComparison: null,
         selectedWorkoutKey: "",
         comparisonAnchorPct: 50,
@@ -3771,6 +3772,100 @@
         });
       }
 
+      function metricConfidence(frame, metric) {
+        const joints = SIDE_JOINTS[metric?.side]?.[metric?.joint];
+        if (!joints || !frame?.conf) return null;
+        return Math.min(
+          Number(frame.conf[joints.proximal] ?? NaN),
+          Number(frame.conf[joints.center] ?? NaN),
+          Number(frame.conf[joints.distal] ?? NaN)
+        );
+      }
+
+      function contextualAngleMetric(frame = state.frames[state.frameIndex]) {
+        if (state.romMode?.workout) return metricForWorkoutRep(state.romMode.workout, state.romMode.rep);
+        const workout = currentWorkout(frame?.t ?? currentTime()) || currentWorkout(currentTime());
+        if (workout) return metricForWorkoutRep(workout, currentRep(frame?.t ?? currentTime()));
+        return metricForSelection(state.selectedAnatomy);
+      }
+
+      function contextualAngleSeries(frame = state.frames[state.frameIndex]) {
+        const metric = contextualAngleMetric(frame);
+        if (!metric) return activeAngleSeries();
+        return state.frames.map((sampleFrame) => {
+          const reading = angleReadingForMetric(sampleFrame, metric);
+          return {
+            t: sampleFrame.t,
+            angle: reading?.angle ?? null,
+            label: metric.label,
+            side: metric.side,
+            workout: reviewRange(frame).label,
+            confidence: metricConfidence(sampleFrame, metric)
+          };
+        });
+      }
+
+      function poseQuality(frame) {
+        if (!frame?.joints?.length) return 0;
+        const valid = frame.joints.filter(finitePoint).length / Math.max(1, frame.joints.length);
+        const confidence = frame.conf?.length
+          ? frame.conf.reduce((sum, value) => sum + Math.max(0, Math.min(1, Number(value) || 0)), 0) / frame.conf.length
+          : valid;
+        return Math.max(0, Math.min(1, (valid * 0.55) + (confidence * 0.45)));
+      }
+
+      function jointDistance(a, b) {
+        if (!finitePoint(a) || !finitePoint(b)) return null;
+        const dx = Number(a[0]) - Number(b[0]);
+        const dy = Number(a[1]) - Number(b[1]);
+        const dz = Number(a[2]) - Number(b[2]);
+        return Math.sqrt((dx * dx) + (dy * dy) + (dz * dz));
+      }
+
+      function computeMotionIntensitySeries() {
+        if (state.frames.length < 2) return [];
+        const raw = state.frames.map((frame, index) => {
+          if (index === 0) return { t: frame.t, value: 0, quality: poseQuality(frame) };
+          const prev = state.frames[index - 1];
+          const dt = Math.max(0.001, frame.t - prev.t);
+          let weightedSpeed = 0;
+          let weightSum = 0;
+          for (let jointIndex = 0; jointIndex < Math.min(frame.joints.length, prev.joints.length); jointIndex += 1) {
+            const distance = jointDistance(frame.joints[jointIndex], prev.joints[jointIndex]);
+            if (!Number.isFinite(distance)) continue;
+            const confidence = Math.min(
+              Math.max(0, Math.min(1, Number(frame.conf?.[jointIndex] ?? 1))),
+              Math.max(0, Math.min(1, Number(prev.conf?.[jointIndex] ?? 1)))
+            );
+            weightedSpeed += (distance / dt) * confidence;
+            weightSum += confidence;
+          }
+          return {
+            t: frame.t,
+            value: weightSum ? weightedSpeed / weightSum : 0,
+            quality: poseQuality(frame)
+          };
+        });
+        if (raw[1]) raw[0].value = raw[1].value;
+        const sorted = raw.map((sample) => sample.value).filter(Number.isFinite).sort((a, b) => a - b);
+        const scale = sorted.length ? sorted[Math.max(0, Math.floor(sorted.length * 0.95) - 1)] : 1;
+        return raw.map((sample, index) => {
+          const lo = Math.max(0, index - 2);
+          const hi = Math.min(raw.length - 1, index + 2);
+          let sum = 0;
+          let count = 0;
+          for (let i = lo; i <= hi; i += 1) {
+            sum += raw[i].value;
+            count += 1;
+          }
+          return {
+            t: sample.t,
+            value: Math.max(0, Math.min(1, (sum / Math.max(1, count)) / Math.max(0.0001, scale))),
+            quality: sample.quality
+          };
+        });
+      }
+
       function angleStatsForRange(startSec, endSec) {
         const lo = Math.min(startSec, endSec);
         const hi = Math.max(startSec, endSec);
@@ -4723,7 +4818,7 @@
         const pad = 18 * dpr;
         const visible = timelineRange();
         const spanSec = Math.max(0.001, visible.endSec - visible.startSec);
-        const series = activeAngleSeries().filter((sample) => (
+        const series = contextualAngleSeries(frame).filter((sample) => (
           Number.isFinite(sample.angle) && sample.t >= visible.startSec && sample.t <= visible.endSec
         ));
         const values = series.map((sample) => sample.angle);
@@ -5041,41 +5136,44 @@
         const visible = timelineRange();
         const spanSec = Math.max(0.001, visible.endSec - visible.startSec);
         drawTimelineCanvas(els.timelineAngleTrack, (ctx, width, height, dpr) => {
-          const series = activeAngleSeries().filter((sample) => (
-            Number.isFinite(sample.angle) && sample.t >= visible.startSec && sample.t <= visible.endSec
+          const series = (state.motionIntensitySeries.length ? state.motionIntensitySeries : computeMotionIntensitySeries()).filter((sample) => (
+            Number.isFinite(sample.value) && sample.t >= visible.startSec && sample.t <= visible.endSec
           ));
-          const values = series.map((sample) => sample.angle);
-          const min = values.length ? Math.max(0, Math.min(...values) - 6) : 0;
-          const max = values.length ? Math.min(190, Math.max(...values) + 6) : 180;
-          const span = Math.max(1, max - min);
           ctx.strokeStyle = "rgba(23, 23, 23, 0.12)";
           ctx.lineWidth = dpr;
           ctx.beginPath();
-          ctx.moveTo(0, height * 0.5);
-          ctx.lineTo(width, height * 0.5);
+          ctx.moveTo(0, height * 0.78);
+          ctx.lineTo(width, height * 0.78);
           ctx.stroke();
           if (!series.length) return;
           ctx.beginPath();
           series.forEach((sample, index) => {
             const x = ((sample.t - visible.startSec) / spanSec) * width;
-            const y = height - ((sample.angle - min) / span) * height;
+            const y = height - (sample.value * height * 0.86);
             if (index === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
           });
-          ctx.strokeStyle = "rgba(11, 114, 185, 0.20)";
-          ctx.lineWidth = 4.8 * dpr;
+          ctx.strokeStyle = "rgba(11, 114, 185, 0.18)";
+          ctx.lineWidth = 5.6 * dpr;
           ctx.stroke();
 
           ctx.beginPath();
           series.forEach((sample, index) => {
             const x = ((sample.t - visible.startSec) / spanSec) * width;
-            const y = height - ((sample.angle - min) / span) * height;
+            const y = height - (sample.value * height * 0.86);
             if (index === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
           });
-          ctx.strokeStyle = "#c2410c";
+          ctx.strokeStyle = "#0b72b9";
           ctx.lineWidth = 2.2 * dpr;
           ctx.stroke();
+
+          for (const sample of series) {
+            if (sample.quality >= 0.45) continue;
+            const x = ((sample.t - visible.startSec) / spanSec) * width;
+            ctx.fillStyle = "rgba(180, 35, 24, 0.12)";
+            ctx.fillRect(x, 0, Math.max(1, width / Math.max(1, series.length)), height);
+          }
         });
 
         drawTimelineCanvas(els.timelineQualityTrack, (ctx, width, height) => {
@@ -5083,11 +5181,7 @@
           const visibleFrames = state.frames.filter((frame) => frame.t >= visible.startSec && frame.t <= visible.endSec).length || state.frames.length;
           for (const frame of state.frames) {
             if (frame.t < visible.startSec || frame.t > visible.endSec) continue;
-            const valid = frame.joints.filter(finitePoint).length / 17;
-            const confidence = frame.conf.length
-              ? frame.conf.reduce((sum, value) => sum + Math.max(0, Math.min(1, Number(value) || 0)), 0) / frame.conf.length
-              : valid;
-            const quality = Math.max(0, Math.min(1, (valid * 0.55) + (confidence * 0.45)));
+            const quality = poseQuality(frame);
             const x = ((frame.t - visible.startSec) / spanSec) * width;
             const barHeight = Math.max(1, quality * height);
             ctx.fillStyle = quality > 0.7 ? "rgba(22, 128, 74, 0.66)" : quality > 0.45 ? "rgba(183, 121, 31, 0.58)" : "rgba(180, 35, 24, 0.62)";
@@ -5319,6 +5413,7 @@
         state.metadata = metadata;
         state.reviewPackage = reviewPackage;
         state.analysis = analysisFromReviewPackage(reviewPackage, analysis);
+        state.motionIntensitySeries = computeMotionIntensitySeries();
         await loadComparisons();
         const packageVideo = reviewPackage?.video || {};
         els.video.src = packageVideo.browser_smpl_preview || packageVideo.smpl_preview || VIDEO_URL;
