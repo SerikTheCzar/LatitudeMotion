@@ -186,6 +186,7 @@
       .layout {
         display: grid;
         grid-template-columns: minmax(0, 1.42fr) minmax(360px, 0.58fr);
+        grid-template-rows: auto auto;
         gap: 16px;
         align-items: start;
       }
@@ -202,6 +203,8 @@
       }
 
       .stage-card {
+        grid-column: 1;
+        grid-row: 1;
         min-height: min(84vh, 980px);
       }
 
@@ -1319,8 +1322,34 @@
       }
 
       .side {
+        grid-column: 2;
+        grid-row: 1 / span 2;
         display: grid;
         gap: 16px;
+      }
+
+      .measurement-tray {
+        grid-column: 1;
+        grid-row: 2;
+        overflow: hidden;
+        background: #ffffff;
+        border-top: 1px solid var(--line);
+      }
+
+      .measurement-tray[hidden] {
+        display: none;
+      }
+
+      .measurement-tray-body {
+        display: grid;
+        gap: 12px;
+      }
+
+      .measurement-detail-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(300px, 0.34fr);
+        gap: 12px;
+        align-items: stretch;
       }
 
       .panel {
@@ -1599,12 +1628,18 @@
       }
 
       .review-grid {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 7px;
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        overscroll-behavior-x: contain;
+        padding-bottom: 4px;
+        scroll-snap-type: x proximity;
       }
 
       .review-cell {
+        flex: 0 0 150px;
+        min-height: 62px;
+        scroll-snap-align: start;
         border: 1px solid rgba(23, 23, 23, 0.1);
         padding: 8px;
         background: rgba(255, 255, 255, 0.56);
@@ -2378,6 +2413,13 @@
           grid-template-columns: 1fr;
         }
 
+        .stage-card,
+        .side,
+        .measurement-tray {
+          grid-column: 1;
+          grid-row: auto;
+        }
+
         .side {
           grid-template-columns: repeat(2, minmax(0, 1fr));
         }
@@ -2466,6 +2508,10 @@
         }
 
         .stat-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .measurement-detail-row {
           grid-template-columns: 1fr;
         }
       }
@@ -2723,54 +2769,6 @@
                     </div>
                     <div id="selectedObjectStats" class="window-stats">Window metrics update after selecting a rep.</div>
                   </div>
-                  <div class="review-grid">
-                    <div class="review-cell"><strong id="jointVisibilityValue">--</strong><span>joint visibility</span></div>
-                    <div class="review-cell"><strong id="modelConfidenceValue">--</strong><span>model confidence</span></div>
-                    <div class="review-cell"><strong id="kinematicConsistencyValue">--</strong><span>kinematic consistency</span></div>
-                    <div class="review-cell"><strong id="measurementConfidenceValue">--</strong><span>measurement confidence</span></div>
-                    <div class="review-cell"><strong id="meanRomValue">--</strong><span>mean ROM</span></div>
-                    <div class="review-cell"><strong id="romSdValue">--</strong><span>ROM SD</span></div>
-                    <div class="review-cell"><strong id="bestWorstRepValue">--</strong><span>best / lowest ROM</span></div>
-                    <div class="review-cell"><strong id="repTempoValue">--</strong><span>rep time mean / SD</span></div>
-                    <div class="review-cell"><strong id="robustSpeedValue">--</strong><span>median / p95 speed</span></div>
-                    <div class="review-cell"><strong id="endpointJitterValue">--</strong><span>endpoint jitter</span></div>
-                    <div class="review-cell"><strong id="toEndpointValue">--</strong><span>to endpoint</span></div>
-                    <div class="review-cell"><strong id="returnPhaseValue">--</strong><span>return phase</span></div>
-                    <div class="review-cell"><strong id="phaseRatioValue">--</strong><span>phase ratio</span></div>
-                    <div class="review-cell"><strong id="endpointDwellValue">--</strong><span>endpoint dwell</span></div>
-                    <div class="review-cell"><strong id="reversalSmoothnessValue">--</strong><span>reversal smoothness</span></div>
-                    <div class="review-cell"><strong id="selectedSideRomValue">--</strong><span>selected-side ROM</span></div>
-                    <div class="review-cell"><strong id="oppositeSideRomValue">--</strong><span>opposite-side ROM</span></div>
-                    <div class="review-cell"><strong id="sideRomDeltaValue">--</strong><span>side ROM delta</span></div>
-                    <div class="review-cell"><strong id="sideSpeedDeltaValue">--</strong><span>side speed delta</span></div>
-                    <div class="review-cell"><strong id="sideTimingDeltaValue">--</strong><span>side endpoint delta</span></div>
-                    <div class="review-cell"><strong id="trunkLeanValue">--</strong><span>trunk lean range</span></div>
-                    <div class="review-cell"><strong id="shoulderHikeValue">--</strong><span>shoulder elevation delta</span></div>
-                    <div class="review-cell"><strong id="torsoRotationValue">--</strong><span>torso rotation range</span></div>
-                    <div class="review-cell"><strong id="pelvisShiftValue">--</strong><span>pelvis lateral shift</span></div>
-                    <div class="review-cell"><strong id="associatedMovementValue">--</strong><span>largest associated movement</span></div>
-                    <div class="review-cell"><strong id="romDriftValue">--</strong><span>set ROM drift</span></div>
-                    <div class="review-cell"><strong id="tempoDriftValue">--</strong><span>set time drift</span></div>
-                    <div class="review-cell"><strong id="speedDriftValue">--</strong><span>set speed drift</span></div>
-                    <div class="review-cell"><strong id="endpointDriftValue">--</strong><span>endpoint timing drift</span></div>
-                    <div class="review-cell"><strong id="lowestConfidenceRepValue">--</strong><span>lowest-confidence rep</span></div>
-                    <div class="review-cell"><strong id="mostDifferentRepValue">--</strong><span>most different ROM rep</span></div>
-                    <div class="review-cell"><strong id="notableRepsValue">--</strong><span>notable reps</span></div>
-                    <div class="review-cell"><strong id="historyCountValue">--</strong><span>matched history</span></div>
-                    <div class="review-cell"><strong id="priorRomValue">--</strong><span>prior workout avg</span></div>
-                    <div class="review-cell"><strong id="priorDeltaValue">--</strong><span>current - prior</span></div>
-                    <div class="review-cell"><strong id="baselineDeltaValue">--</strong><span>current - baseline</span></div>
-                    <div class="review-cell"><strong id="bestHistoricalValue">--</strong><span>best prior avg</span></div>
-                    <div class="review-cell"><strong id="priorDoseValue">--</strong><span>prior reps</span></div>
-                    <div class="review-cell"><strong id="setDoseValue">--</strong><span>set reps</span></div>
-                    <div class="review-cell"><strong id="activeTimeValue">--</strong><span>active time</span></div>
-                    <div class="review-cell"><strong id="gapTimeValue">--</strong><span>gap / rest time</span></div>
-                    <div class="review-cell"><strong id="setDurationValue">--</strong><span>set duration</span></div>
-                    <div class="review-cell"><strong id="romVolumeValue">--</strong><span>ROM volume</span></div>
-                    <div class="review-cell"><strong id="repDensityValue">--</strong><span>rep density</span></div>
-                  </div>
-                  <canvas id="repOverlay" class="rep-overlay"></canvas>
-                  <div id="noteSnippet" class="note-snippet">Select a rep to generate chart-ready measurement fields.</div>
                 </div>
               </div>
               <div id="comparisonContext" class="comparison-context" hidden>
@@ -2838,6 +2836,67 @@
             </div>
           </article>
         </aside>
+
+        <article id="measurementTray" class="measurement-tray" hidden>
+          <div class="panel-head">
+            <div>
+              <h2>Measurement detail strip</h2>
+              <p>Window-level metrics for the selected rep or movement, separate from the current playhead.</p>
+            </div>
+          </div>
+          <div class="panel-body measurement-tray-body">
+            <div class="measurement-detail-row">
+              <canvas id="repOverlay" class="rep-overlay"></canvas>
+              <div id="noteSnippet" class="note-snippet">Select a rep to generate chart-ready measurement fields.</div>
+            </div>
+            <div class="review-grid" aria-label="Selected measurement details">
+              <div class="review-cell"><strong id="jointVisibilityValue">--</strong><span>joint visibility</span></div>
+              <div class="review-cell"><strong id="modelConfidenceValue">--</strong><span>model confidence</span></div>
+              <div class="review-cell"><strong id="kinematicConsistencyValue">--</strong><span>kinematic consistency</span></div>
+              <div class="review-cell"><strong id="measurementConfidenceValue">--</strong><span>measurement confidence</span></div>
+              <div class="review-cell"><strong id="meanRomValue">--</strong><span>mean ROM</span></div>
+              <div class="review-cell"><strong id="romSdValue">--</strong><span>ROM SD</span></div>
+              <div class="review-cell"><strong id="bestWorstRepValue">--</strong><span>best / lowest ROM</span></div>
+              <div class="review-cell"><strong id="repTempoValue">--</strong><span>rep time mean / SD</span></div>
+              <div class="review-cell"><strong id="robustSpeedValue">--</strong><span>median / p95 speed</span></div>
+              <div class="review-cell"><strong id="endpointJitterValue">--</strong><span>endpoint jitter</span></div>
+              <div class="review-cell"><strong id="toEndpointValue">--</strong><span>to endpoint</span></div>
+              <div class="review-cell"><strong id="returnPhaseValue">--</strong><span>return phase</span></div>
+              <div class="review-cell"><strong id="phaseRatioValue">--</strong><span>phase ratio</span></div>
+              <div class="review-cell"><strong id="endpointDwellValue">--</strong><span>endpoint dwell</span></div>
+              <div class="review-cell"><strong id="reversalSmoothnessValue">--</strong><span>reversal smoothness</span></div>
+              <div class="review-cell"><strong id="selectedSideRomValue">--</strong><span>selected-side ROM</span></div>
+              <div class="review-cell"><strong id="oppositeSideRomValue">--</strong><span>opposite-side ROM</span></div>
+              <div class="review-cell"><strong id="sideRomDeltaValue">--</strong><span>side ROM delta</span></div>
+              <div class="review-cell"><strong id="sideSpeedDeltaValue">--</strong><span>side speed delta</span></div>
+              <div class="review-cell"><strong id="sideTimingDeltaValue">--</strong><span>side endpoint delta</span></div>
+              <div class="review-cell"><strong id="trunkLeanValue">--</strong><span>trunk lean range</span></div>
+              <div class="review-cell"><strong id="shoulderHikeValue">--</strong><span>shoulder elevation delta</span></div>
+              <div class="review-cell"><strong id="torsoRotationValue">--</strong><span>torso rotation range</span></div>
+              <div class="review-cell"><strong id="pelvisShiftValue">--</strong><span>pelvis lateral shift</span></div>
+              <div class="review-cell"><strong id="associatedMovementValue">--</strong><span>largest associated movement</span></div>
+              <div class="review-cell"><strong id="romDriftValue">--</strong><span>set ROM drift</span></div>
+              <div class="review-cell"><strong id="tempoDriftValue">--</strong><span>set time drift</span></div>
+              <div class="review-cell"><strong id="speedDriftValue">--</strong><span>set speed drift</span></div>
+              <div class="review-cell"><strong id="endpointDriftValue">--</strong><span>endpoint timing drift</span></div>
+              <div class="review-cell"><strong id="lowestConfidenceRepValue">--</strong><span>lowest-confidence rep</span></div>
+              <div class="review-cell"><strong id="mostDifferentRepValue">--</strong><span>most different ROM rep</span></div>
+              <div class="review-cell"><strong id="notableRepsValue">--</strong><span>notable reps</span></div>
+              <div class="review-cell"><strong id="historyCountValue">--</strong><span>matched history</span></div>
+              <div class="review-cell"><strong id="priorRomValue">--</strong><span>prior workout avg</span></div>
+              <div class="review-cell"><strong id="priorDeltaValue">--</strong><span>current - prior</span></div>
+              <div class="review-cell"><strong id="baselineDeltaValue">--</strong><span>current - baseline</span></div>
+              <div class="review-cell"><strong id="bestHistoricalValue">--</strong><span>best prior avg</span></div>
+              <div class="review-cell"><strong id="priorDoseValue">--</strong><span>prior reps</span></div>
+              <div class="review-cell"><strong id="setDoseValue">--</strong><span>set reps</span></div>
+              <div class="review-cell"><strong id="activeTimeValue">--</strong><span>active time</span></div>
+              <div class="review-cell"><strong id="gapTimeValue">--</strong><span>gap / rest time</span></div>
+              <div class="review-cell"><strong id="setDurationValue">--</strong><span>set duration</span></div>
+              <div class="review-cell"><strong id="romVolumeValue">--</strong><span>ROM volume</span></div>
+              <div class="review-cell"><strong id="repDensityValue">--</strong><span>rep density</span></div>
+            </div>
+          </div>
+        </article>
       </section>
     </main>
 
@@ -3004,6 +3063,7 @@
         reviewAngleDetail: document.getElementById("reviewAngleDetail"),
         transportSpeedLabel: document.getElementById("transportSpeedLabel"),
         romAnalysis: document.getElementById("romAnalysis"),
+        measurementTray: document.getElementById("measurementTray"),
         romTitle: document.getElementById("romTitle"),
         romSummary: document.getElementById("romSummary"),
         romFlexionValue: document.getElementById("romFlexionValue"),
@@ -3105,6 +3165,7 @@
         draftEndBtn: document.getElementById("draftEndBtn"),
         frameStepReadout: document.getElementById("frameStepReadout")
       };
+      document.querySelector(".stage-card")?.appendChild(els.measurementTray);
 
       const vec = (point) => [Number(point[0]), Number(point[1]), Number(point[2])];
       const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
@@ -5850,6 +5911,7 @@
       function renderRomAnalysis(frame = state.frames[state.frameIndex]) {
         const analysis = activeRomAnalysis();
         els.romAnalysis.hidden = !analysis;
+        els.measurementTray.hidden = !analysis;
         if (!analysis) return;
         const { workout, rep, metric, flexionSample, extensionSample, rom, peakPct, visibility } = analysis;
         const consistency = repConsistencyForWorkout(workout);
