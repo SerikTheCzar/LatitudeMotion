@@ -2626,6 +2626,12 @@
                     <div class="review-cell"><strong id="lowestConfidenceRepValue">--</strong><span>lowest-confidence rep</span></div>
                     <div class="review-cell"><strong id="mostDifferentRepValue">--</strong><span>most different ROM rep</span></div>
                     <div class="review-cell"><strong id="notableRepsValue">--</strong><span>notable reps</span></div>
+                    <div class="review-cell"><strong id="historyCountValue">--</strong><span>matched history</span></div>
+                    <div class="review-cell"><strong id="priorRomValue">--</strong><span>prior workout avg</span></div>
+                    <div class="review-cell"><strong id="priorDeltaValue">--</strong><span>current - prior</span></div>
+                    <div class="review-cell"><strong id="baselineDeltaValue">--</strong><span>current - baseline</span></div>
+                    <div class="review-cell"><strong id="bestHistoricalValue">--</strong><span>best prior avg</span></div>
+                    <div class="review-cell"><strong id="priorDoseValue">--</strong><span>prior reps</span></div>
                   </div>
                   <canvas id="repOverlay" class="rep-overlay"></canvas>
                   <div id="noteSnippet" class="note-snippet">Select a rep to generate chart-ready measurement fields.</div>
@@ -2908,6 +2914,12 @@
         lowestConfidenceRepValue: document.getElementById("lowestConfidenceRepValue"),
         mostDifferentRepValue: document.getElementById("mostDifferentRepValue"),
         notableRepsValue: document.getElementById("notableRepsValue"),
+        historyCountValue: document.getElementById("historyCountValue"),
+        priorRomValue: document.getElementById("priorRomValue"),
+        priorDeltaValue: document.getElementById("priorDeltaValue"),
+        baselineDeltaValue: document.getElementById("baselineDeltaValue"),
+        bestHistoricalValue: document.getElementById("bestHistoricalValue"),
+        priorDoseValue: document.getElementById("priorDoseValue"),
         repOverlay: document.getElementById("repOverlay"),
         noteSnippet: document.getElementById("noteSnippet"),
         comparisonContext: document.getElementById("comparisonContext"),
@@ -4409,6 +4421,43 @@
         };
       }
 
+      function sessionTimestamp(session = {}) {
+        const value = new Date(session.started_at || session.created_at || 0).valueOf();
+        return Number.isFinite(value) ? value : 0;
+      }
+
+      function historicalProgression(analysis, consistency) {
+        const comparison = comparisonForWorkout(analysis?.workout);
+        const currentRom = Number.isFinite(consistency?.meanRom)
+          ? consistency.meanRom
+          : (Number.isFinite(analysis?.rom) ? analysis.rom : comparison?.current?.metrics?.avg_amplitude);
+        const candidates = (comparison?.reference_candidates || [])
+          .map((candidate) => ({
+            session: candidate.session,
+            metrics: candidate.metrics || {},
+            rom: Number(candidate.metrics?.avg_amplitude),
+            repCount: Number(candidate.metrics?.rep_count ?? candidate.workout?.rep_count),
+            time: sessionTimestamp(candidate.session)
+          }))
+          .filter((candidate) => Number.isFinite(candidate.rom));
+        if (!Number.isFinite(currentRom) || !candidates.length) return null;
+        const prior = comparison?.reference_session
+          ? candidates.find((candidate) => candidate.session?.id === comparison.reference_session.id) || candidates[0]
+          : candidates[0];
+        const baseline = [...candidates].sort((a, b) => a.time - b.time)[0] || prior;
+        const best = [...candidates].sort((a, b) => b.rom - a.rom)[0] || prior;
+        return {
+          comparison,
+          currentRom,
+          count: candidates.length,
+          prior,
+          baseline,
+          best,
+          priorDelta: currentRom - prior.rom,
+          baselineDelta: currentRom - baseline.rom
+        };
+      }
+
       function chartabilityForRep(analysis, consistency) {
         if (!analysis?.samples?.length) {
           return {
@@ -4511,7 +4560,7 @@
         els.chartabilityReasons.innerHTML = result.reasons.map((reason) => `<span class="reason-chip">${escapeHtml(reason)}</span>`).join("");
       }
 
-      function measurementSnippet(analysis, chartability, consistency, sideComparison = null, compensation = null, drift = null) {
+      function measurementSnippet(analysis, chartability, consistency, sideComparison = null, compensation = null, drift = null, progression = null) {
         const workout = analysis.workout?.display_label || analysis.workout?.label || "movement";
         const rep = analysis.rep?.index ?? "?";
         const metric = analysis.metric?.label || "measured angle";
@@ -4525,7 +4574,8 @@
         const sideDelta = sideComparison ? ` | side ROM delta ${signedDegrees(sideComparison.romDelta)}` : "";
         const associated = compensation?.largest ? ` | associated ${associatedMovementLabel(compensation.largest)}` : "";
         const setDrift = drift && Number.isFinite(drift.romDrift) ? ` | set ROM drift ${signedDegrees(drift.romDrift)}` : "";
-        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase}${sideDelta}${associated}${setDrift} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
+        const priorDelta = progression && Number.isFinite(progression.priorDelta) ? ` | prior delta ${signedDegrees(progression.priorDelta)}` : "";
+        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase}${sideDelta}${associated}${setDrift}${priorDelta} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
       }
 
       function activeRomAnalysis() {
@@ -5593,6 +5643,7 @@
         const sideComparison = sideToSideAnalysis(analysis);
         const compensation = compensationAnalysis(analysis);
         const drift = setDriftAnalysis(consistency);
+        const progression = historicalProgression(analysis, consistency);
         const workoutLabel = workout.display_label || workout.label || "Movement";
         const flexionDescriptor = metric.joint === "elbow" ? "smallest internal angle" : "largest measured elevation";
         els.romFlexionLabel.textContent = metric.joint === "elbow" ? "max flexion" : "peak elevation";
@@ -5659,7 +5710,17 @@
           ? repLabel(drift.mostDifferentRom, ` ${signedDegrees(drift.mostDifferentRom.rom - consistency.meanRom)}`)
           : "--";
         els.notableRepsValue.textContent = drift?.notableLabels?.length ? drift.notableLabels.join(" / ") : "--";
-        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency, sideComparison, compensation, drift);
+        els.historyCountValue.textContent = Number.isFinite(progression?.count) ? `${progression.count}` : "--";
+        els.priorRomValue.textContent = progression?.prior
+          ? `${fmt(progression.prior.rom, 1)} deg ${shortComparisonSession(progression.prior.session)}`
+          : "--";
+        els.priorDeltaValue.textContent = signedDegrees(progression?.priorDelta);
+        els.baselineDeltaValue.textContent = signedDegrees(progression?.baselineDelta);
+        els.bestHistoricalValue.textContent = progression?.best
+          ? `${fmt(progression.best.rom, 1)} deg ${shortComparisonSession(progression.best.session)}`
+          : "--";
+        els.priorDoseValue.textContent = Number.isFinite(progression?.prior?.repCount) ? `${progression.prior.repCount} reps` : "--";
+        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency, sideComparison, compensation, drift, progression);
         drawRepOverlay(workout, rep);
       }
 
@@ -6309,6 +6370,7 @@
         const activeSideComparison = activeMeasurement ? sideToSideAnalysis(activeMeasurement) : null;
         const activeCompensation = activeMeasurement ? compensationAnalysis(activeMeasurement) : null;
         const activeDrift = activeConsistency ? setDriftAnalysis(activeConsistency) : null;
+        const activeProgression = activeMeasurement ? historicalProgression(activeMeasurement, activeConsistency) : null;
         state.annotations.push({
           id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
           createdAt: new Date().toISOString(),
@@ -6322,7 +6384,8 @@
           associatedMovement: activeCompensation?.largest ? associatedMovementLabel(activeCompensation.largest) : "",
           setRomDrift: activeDrift?.romDrift ?? null,
           notableReps: activeDrift?.notableLabels || [],
-          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency, activeSideComparison, activeCompensation, activeDrift) : "",
+          priorRomDelta: activeProgression?.priorDelta ?? null,
+          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency, activeSideComparison, activeCompensation, activeDrift, activeProgression) : "",
           ...(stats || fallbackStats)
         });
         state.annotations.sort((a, b) => a.startSec - b.startSec);
