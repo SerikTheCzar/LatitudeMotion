@@ -1461,6 +1461,109 @@
         line-height: 1.35;
       }
 
+      .measurement-review {
+        display: grid;
+        gap: 10px;
+        padding: 12px;
+        border: 1px solid rgba(23, 23, 23, 0.12);
+        background: rgba(255, 255, 255, 0.64);
+      }
+
+      .measurement-review-head {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .measurement-review-head strong {
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .chartability-chip,
+      .reason-chip {
+        display: inline-flex;
+        align-items: center;
+        border: 1px solid rgba(23, 23, 23, 0.14);
+        padding: 5px 7px;
+        color: var(--ink);
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .chartability-chip.chartable {
+        border-color: rgba(22, 128, 74, 0.38);
+        background: rgba(22, 128, 74, 0.12);
+      }
+
+      .chartability-chip.caution {
+        border-color: rgba(183, 121, 31, 0.42);
+        background: rgba(183, 121, 31, 0.12);
+      }
+
+      .chartability-chip.review {
+        border-color: rgba(194, 65, 12, 0.44);
+        background: rgba(194, 65, 12, 0.12);
+      }
+
+      .chartability-chip.unreliable {
+        border-color: rgba(180, 35, 24, 0.44);
+        background: rgba(180, 35, 24, 0.12);
+      }
+
+      .reason-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .review-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+      }
+
+      .review-cell {
+        border: 1px solid rgba(23, 23, 23, 0.1);
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.56);
+      }
+
+      .review-cell strong {
+        display: block;
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .review-cell span {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .rep-overlay {
+        width: 100%;
+        height: 118px;
+        border: 1px solid rgba(23, 23, 23, 0.12);
+        background: rgba(255, 255, 255, 0.64);
+      }
+
+      .note-snippet {
+        border-left: 3px solid var(--amber);
+        padding: 8px 10px;
+        background: rgba(255, 247, 237, 0.68);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
       .comparison-context {
         display: grid;
         gap: 10px;
@@ -2484,6 +2587,27 @@
                   <div class="rom-metric"><strong id="romFrameValue">--</strong><span>current frame</span></div>
                 </div>
                 <div id="romNote" class="rom-note">Rep-to-rep consistency is reported as ROM standard deviation across detected reps for this movement.</div>
+                <div class="measurement-review">
+                  <div class="measurement-review-head">
+                    <strong>Measurement Review</strong>
+                    <span id="chartabilityChip" class="chartability-chip caution">Review</span>
+                  </div>
+                  <div id="chartabilityReasons" class="reason-list"></div>
+                  <div class="review-grid">
+                    <div class="review-cell"><strong id="jointVisibilityValue">--</strong><span>joint visibility</span></div>
+                    <div class="review-cell"><strong id="modelConfidenceValue">--</strong><span>model confidence</span></div>
+                    <div class="review-cell"><strong id="kinematicConsistencyValue">--</strong><span>kinematic consistency</span></div>
+                    <div class="review-cell"><strong id="measurementConfidenceValue">--</strong><span>measurement confidence</span></div>
+                    <div class="review-cell"><strong id="meanRomValue">--</strong><span>mean ROM</span></div>
+                    <div class="review-cell"><strong id="romSdValue">--</strong><span>ROM SD</span></div>
+                    <div class="review-cell"><strong id="bestWorstRepValue">--</strong><span>best / lowest ROM</span></div>
+                    <div class="review-cell"><strong id="repTempoValue">--</strong><span>rep time mean / SD</span></div>
+                    <div class="review-cell"><strong id="robustSpeedValue">--</strong><span>median / p95 speed</span></div>
+                    <div class="review-cell"><strong id="endpointJitterValue">--</strong><span>endpoint jitter</span></div>
+                  </div>
+                  <canvas id="repOverlay" class="rep-overlay"></canvas>
+                  <div id="noteSnippet" class="note-snippet">Select a rep to generate chart-ready measurement fields.</div>
+                </div>
               </div>
               <div id="comparisonContext" class="comparison-context" hidden>
                 <div class="comparison-head">
@@ -2728,6 +2852,20 @@
         romFrameValue: document.getElementById("romFrameValue"),
         romNote: document.getElementById("romNote"),
         romExitBtn: document.getElementById("romExitBtn"),
+        chartabilityChip: document.getElementById("chartabilityChip"),
+        chartabilityReasons: document.getElementById("chartabilityReasons"),
+        jointVisibilityValue: document.getElementById("jointVisibilityValue"),
+        modelConfidenceValue: document.getElementById("modelConfidenceValue"),
+        kinematicConsistencyValue: document.getElementById("kinematicConsistencyValue"),
+        measurementConfidenceValue: document.getElementById("measurementConfidenceValue"),
+        meanRomValue: document.getElementById("meanRomValue"),
+        romSdValue: document.getElementById("romSdValue"),
+        bestWorstRepValue: document.getElementById("bestWorstRepValue"),
+        repTempoValue: document.getElementById("repTempoValue"),
+        robustSpeedValue: document.getElementById("robustSpeedValue"),
+        endpointJitterValue: document.getElementById("endpointJitterValue"),
+        repOverlay: document.getElementById("repOverlay"),
+        noteSnippet: document.getElementById("noteSnippet"),
         comparisonContext: document.getElementById("comparisonContext"),
         comparisonKicker: document.getElementById("comparisonKicker"),
         comparisonTitle: document.getElementById("comparisonTitle"),
@@ -3866,6 +4004,47 @@
         });
       }
 
+      function nums(values) {
+        return values.map(Number).filter(Number.isFinite);
+      }
+
+      function average(values) {
+        const clean = nums(values);
+        return clean.length ? clean.reduce((sum, value) => sum + value, 0) / clean.length : null;
+      }
+
+      function sampleSd(values) {
+        const clean = nums(values);
+        if (clean.length < 2) return null;
+        const avg = average(clean);
+        return Math.sqrt(clean.reduce((sum, value) => sum + ((value - avg) ** 2), 0) / Math.max(1, clean.length - 1));
+      }
+
+      function percentile(values, pct) {
+        const clean = nums(values).sort((a, b) => a - b);
+        if (!clean.length) return null;
+        const index = Math.max(0, Math.min(clean.length - 1, Math.floor((clean.length - 1) * pct)));
+        return clean[index];
+      }
+
+      function angularSpeeds(samples) {
+        const speeds = [];
+        for (let i = 1; i < samples.length; i += 1) {
+          const dt = samples[i].t - samples[i - 1].t;
+          if (dt <= 1e-4) continue;
+          speeds.push(Math.abs(samples[i].angle - samples[i - 1].angle) / dt);
+        }
+        return speeds;
+      }
+
+      function endpointJitter(samples, endpointSample) {
+        if (!samples.length || !endpointSample) return null;
+        const duration = Math.max(0.001, samples[samples.length - 1].t - samples[0].t);
+        const windowSec = Math.max(0.08, duration * 0.16);
+        const near = samples.filter((sample) => Math.abs(sample.t - endpointSample.t) <= windowSec);
+        return sampleSd(near.map((sample) => sample.angle));
+      }
+
       function angleStatsForRange(startSec, endSec) {
         const lo = Math.min(startSec, endSec);
         const hi = Math.max(startSec, endSec);
@@ -3910,6 +4089,15 @@
         const flexionSample = isElbow ? minSample : maxSample;
         const extensionSample = isElbow ? maxSample : minSample;
         const duration = Math.max(0.001, rep.end_sec - rep.start_sec);
+        const speeds = angularSpeeds(samples);
+        const peakSpeed = speeds.length ? Math.max(...speeds) : null;
+        const p95Speed = percentile(speeds, 0.95);
+        const medianSpeed = percentile(speeds, 0.5);
+        const confidenceValues = nums(samples.map((sample) => sample.confidence));
+        const expectedFrames = state.frames.filter((frame) => frame.t >= rep.start_sec && frame.t <= rep.end_sec).length;
+        const flexionJitter = endpointJitter(samples, flexionSample);
+        const extensionJitter = endpointJitter(samples, extensionSample);
+        const endpointJitterValue = average([flexionJitter, extensionJitter]);
         return {
           workout,
           rep,
@@ -3921,23 +4109,122 @@
           extensionSample,
           rom: maxSample.angle - minSample.angle,
           peakPct: ((flexionSample.t - rep.start_sec) / duration) * 100,
-          visibility: samples.length / Math.max(1, state.frames.filter((frame) => frame.t >= rep.start_sec && frame.t <= rep.end_sec).length)
+          duration,
+          peakSpeed,
+          p95Speed,
+          medianSpeed,
+          meanConfidence: average(confidenceValues),
+          minConfidence: confidenceValues.length ? Math.min(...confidenceValues) : null,
+          endpointJitter: endpointJitterValue,
+          derivativeSpikeRatio: Number.isFinite(peakSpeed) && Number.isFinite(p95Speed) && p95Speed > 1e-4 ? peakSpeed / p95Speed : null,
+          visibility: samples.length / Math.max(1, expectedFrames),
+          expectedFrames
         };
       }
 
       function repConsistencyForWorkout(workout) {
         const analyses = (workout?.reps || []).map((rep) => repRomAnalysis(workout, rep)).filter((analysis) => analysis && analysis.samples.length);
-        if (analyses.length < 2) return { analyses, meanRom: analyses[0]?.rom ?? null, sdRom: null, cvRom: null };
+        if (analyses.length < 2) return { analyses, meanRom: analyses[0]?.rom ?? null, sdRom: null, cvRom: null, meanDuration: analyses[0]?.duration ?? null, sdDuration: null, consistencyScore: null };
         const roms = analyses.map((analysis) => analysis.rom);
-        const meanRom = roms.reduce((sum, value) => sum + value, 0) / roms.length;
-        const variance = roms.reduce((sum, value) => sum + ((value - meanRom) ** 2), 0) / Math.max(1, roms.length - 1);
-        const sdRom = Math.sqrt(variance);
+        const durations = analyses.map((analysis) => analysis.duration);
+        const meanRom = average(roms);
+        const sdRom = sampleSd(roms);
+        const meanDuration = average(durations);
+        const sdDuration = sampleSd(durations);
+        const bestRep = analyses.reduce((best, analysis) => analysis.rom > best.rom ? analysis : best, analyses[0]);
+        const worstRep = analyses.reduce((worst, analysis) => analysis.rom < worst.rom ? analysis : worst, analyses[0]);
+        const slowestRep = analyses.reduce((slowest, analysis) => analysis.duration > slowest.duration ? analysis : slowest, analyses[0]);
+        const fastestRep = analyses.reduce((fastest, analysis) => analysis.duration < fastest.duration ? analysis : fastest, analyses[0]);
+        const romScore = meanRom > 1e-6 && Number.isFinite(sdRom) ? Math.max(0, 1 - (sdRom / Math.max(1, meanRom)) * 3) : null;
+        const tempoScore = meanDuration > 1e-6 && Number.isFinite(sdDuration) ? Math.max(0, 1 - (sdDuration / Math.max(0.1, meanDuration)) * 2) : null;
+        const consistencyScore = average([romScore, tempoScore]);
         return {
           analyses,
           meanRom,
           sdRom,
-          cvRom: meanRom > 1e-6 ? sdRom / meanRom : null
+          cvRom: meanRom > 1e-6 ? sdRom / meanRom : null,
+          meanDuration,
+          sdDuration,
+          bestRep,
+          worstRep,
+          slowestRep,
+          fastestRep,
+          consistencyScore
         };
+      }
+
+      function chartabilityForRep(analysis, consistency) {
+        if (!analysis?.samples?.length) {
+          return {
+            status: "Not reliable",
+            className: "unreliable",
+            reasons: ["insufficient frames"],
+            jointVisibility: 0,
+            modelConfidence: 0,
+            kinematicConsistency: 0,
+            measurementConfidence: 0
+          };
+        }
+        const reasons = [];
+        const jointVisibility = Math.max(0, Math.min(1, analysis.visibility || 0));
+        const modelConfidence = Math.max(0, Math.min(1, analysis.meanConfidence ?? 0));
+        const jitterPenalty = Number.isFinite(analysis.endpointJitter) ? Math.min(1, analysis.endpointJitter / 12) : 0.5;
+        const spikePenalty = Number.isFinite(analysis.derivativeSpikeRatio) ? Math.min(1, Math.max(0, (analysis.derivativeSpikeRatio - 1.8) / 3.2)) : 0;
+        const consistencyPenalty = Number.isFinite(consistency?.consistencyScore) ? 1 - consistency.consistencyScore : 0.25;
+        const kinematicConsistency = Math.max(0, Math.min(1, 1 - ((jitterPenalty * 0.45) + (spikePenalty * 0.35) + (consistencyPenalty * 0.2))));
+        const measurementConfidence = Math.max(0, Math.min(1, (jointVisibility * 0.32) + (modelConfidence * 0.32) + (kinematicConsistency * 0.36)));
+
+        if (jointVisibility < 0.72) reasons.push("low visibility");
+        if (modelConfidence < 0.62) reasons.push("low model confidence");
+        if (analysis.expectedFrames < 8 || analysis.samples.length < 6) reasons.push("insufficient frames");
+        if (Number.isFinite(analysis.endpointJitter) && analysis.endpointJitter > 8) reasons.push("high jitter");
+        if (Number.isFinite(analysis.derivativeSpikeRatio) && analysis.derivativeSpikeRatio > 2.6) reasons.push("abnormal derivative spike");
+        if (Number.isFinite(consistency?.consistencyScore) && consistency.consistencyScore < 0.58) reasons.push("inconsistent skeleton");
+        if ((analysis.duration ?? 0) < 0.25) reasons.push("weak rep boundary");
+
+        let status = "Chartable";
+        let className = "chartable";
+        if (measurementConfidence < 0.42 || reasons.includes("insufficient frames")) {
+          status = "Not reliable";
+          className = "unreliable";
+        } else if (measurementConfidence < 0.58 || reasons.length >= 3) {
+          status = "Review required";
+          className = "review";
+        } else if (measurementConfidence < 0.76 || reasons.length) {
+          status = "Use with caution";
+          className = "caution";
+        }
+
+        return {
+          status,
+          className,
+          reasons: reasons.length ? reasons : ["measurement-grade"],
+          jointVisibility,
+          modelConfidence,
+          kinematicConsistency,
+          measurementConfidence
+        };
+      }
+
+      function chartPercent(value) {
+        return Number.isFinite(Number(value)) ? `${fmt(Number(value) * 100, 0)}%` : "--";
+      }
+
+      function setChartabilityChip(result) {
+        els.chartabilityChip.textContent = result.status;
+        els.chartabilityChip.className = `chartability-chip ${result.className}`;
+        els.chartabilityReasons.innerHTML = result.reasons.map((reason) => `<span class="reason-chip">${escapeHtml(reason)}</span>`).join("");
+      }
+
+      function measurementSnippet(analysis, chartability, consistency) {
+        const workout = analysis.workout?.display_label || analysis.workout?.label || "movement";
+        const rep = analysis.rep?.index ?? "?";
+        const metric = analysis.metric?.label || "measured angle";
+        const range = `${fmt(analysis.minSample?.angle, 1)}-${fmt(analysis.maxSample?.angle, 1)} deg`;
+        const rom = Number.isFinite(analysis.rom) ? `${fmt(analysis.rom, 1)} deg` : "--";
+        const repCount = consistency?.analyses?.length || analysis.workout?.reps?.length || 0;
+        const sd = Number.isFinite(consistency?.sdRom) ? `${fmt(consistency.sdRom, 1)} deg` : "--";
+        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
       }
 
       function activeRomAnalysis() {
@@ -4909,6 +5196,76 @@
         ctx.stroke();
       }
 
+      function drawRepOverlay(workout, activeRep) {
+        const canvas = els.repOverlay;
+        const rect = canvas.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const width = Math.max(260, Math.round(rect.width * dpr));
+        const height = Math.max(110, Math.round(rect.height * dpr));
+        if (canvas.width !== width || canvas.height !== height) {
+          canvas.width = width;
+          canvas.height = height;
+        }
+        const ctx = canvas.getContext("2d");
+        ctx.clearRect(0, 0, width, height);
+        const pad = 18 * dpr;
+        const analyses = (workout?.reps || [])
+          .map((rep) => repRomAnalysis(workout, rep))
+          .filter((analysis) => analysis?.samples?.length >= 2);
+        const values = analyses.flatMap((analysis) => analysis.samples.map((sample) => sample.angle));
+        if (!analyses.length || !values.length) return;
+        const min = Math.max(0, Math.min(...values) - 8);
+        const max = Math.min(190, Math.max(...values) + 8);
+        const span = Math.max(1, max - min);
+        const buckets = Array.from({ length: 51 }, () => []);
+
+        ctx.strokeStyle = "rgba(23, 23, 23, 0.1)";
+        ctx.lineWidth = dpr;
+        for (let i = 1; i < 4; i += 1) {
+          const y = pad + ((height - pad * 2) * i / 4);
+          ctx.beginPath();
+          ctx.moveTo(pad, y);
+          ctx.lineTo(width - pad, y);
+          ctx.stroke();
+        }
+
+        for (const analysis of analyses) {
+          const duration = Math.max(0.001, analysis.rep.end_sec - analysis.rep.start_sec);
+          const isActive = activeRep && analysis.rep.index === activeRep.index;
+          ctx.beginPath();
+          analysis.samples.forEach((sample, index) => {
+            const pct = Math.max(0, Math.min(1, (sample.t - analysis.rep.start_sec) / duration));
+            const bucket = Math.max(0, Math.min(50, Math.round(pct * 50)));
+            buckets[bucket].push(sample.angle);
+            const x = pad + pct * (width - pad * 2);
+            const y = height - pad - ((sample.angle - min) / span) * (height - pad * 2);
+            if (index === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          });
+          ctx.strokeStyle = isActive ? "#c2410c" : "rgba(11, 114, 185, 0.22)";
+          ctx.lineWidth = (isActive ? 2.4 : 1.2) * dpr;
+          ctx.stroke();
+        }
+
+        ctx.beginPath();
+        buckets.forEach((bucket, index) => {
+          const value = average(bucket);
+          if (!Number.isFinite(value)) return;
+          const x = pad + (index / 50) * (width - pad * 2);
+          const y = height - pad - ((value - min) / span) * (height - pad * 2);
+          if (index === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = "rgba(23, 23, 23, 0.72)";
+        ctx.lineWidth = 2 * dpr;
+        ctx.stroke();
+
+        ctx.fillStyle = "rgba(23, 23, 23, 0.62)";
+        ctx.font = `${9 * dpr}px sans-serif`;
+        ctx.fillText("0%", pad, height - 5 * dpr);
+        ctx.fillText("100%", width - pad - 28 * dpr, height - 5 * dpr);
+      }
+
       function renderComplementaryAngles(frame) {
         els.jointReadouts.innerHTML = complementaryAngles(frame).map((item) => {
           const angle = item.reading ? `${fmt(item.reading.angle, 1)} deg` : "--";
@@ -4931,6 +5288,7 @@
         if (!analysis) return;
         const { workout, rep, metric, flexionSample, extensionSample, rom, peakPct, visibility } = analysis;
         const consistency = repConsistencyForWorkout(workout);
+        const chartability = chartabilityForRep(analysis, consistency);
         const workoutLabel = workout.display_label || workout.label || "Movement";
         const flexionDescriptor = metric.joint === "elbow" ? "smallest internal angle" : "largest measured elevation";
         els.romFlexionLabel.textContent = metric.joint === "elbow" ? "max flexion" : "peak elevation";
@@ -4948,6 +5306,25 @@
         els.romNote.textContent = Number.isFinite(consistency.sdRom)
           ? `Rep-to-rep consistency: mean ROM ${fmt(consistency.meanRom, 1)} deg, SD +/-${fmt(consistency.sdRom, 1)} deg across ${consistency.analyses.length} reps. Max flexion uses ${flexionDescriptor}.`
           : `Max flexion uses ${flexionDescriptor}. Add more bounded reps to calculate rep-to-rep ROM consistency.`;
+        setChartabilityChip(chartability);
+        els.jointVisibilityValue.textContent = chartPercent(chartability.jointVisibility);
+        els.modelConfidenceValue.textContent = chartPercent(chartability.modelConfidence);
+        els.kinematicConsistencyValue.textContent = chartPercent(chartability.kinematicConsistency);
+        els.measurementConfidenceValue.textContent = chartPercent(chartability.measurementConfidence);
+        els.meanRomValue.textContent = Number.isFinite(consistency.meanRom) ? `${fmt(consistency.meanRom, 1)} deg` : "--";
+        els.romSdValue.textContent = Number.isFinite(consistency.sdRom) ? `${fmt(consistency.sdRom, 1)} deg` : "--";
+        els.bestWorstRepValue.textContent = consistency.bestRep && consistency.worstRep
+          ? `rep ${consistency.bestRep.rep.index} ${fmt(consistency.bestRep.rom, 1)} / rep ${consistency.worstRep.rep.index} ${fmt(consistency.worstRep.rom, 1)}`
+          : "--";
+        els.repTempoValue.textContent = Number.isFinite(consistency.meanDuration)
+          ? `${fmt(consistency.meanDuration, 2)}s / ${Number.isFinite(consistency.sdDuration) ? fmt(consistency.sdDuration, 2) : "--"}s`
+          : "--";
+        els.robustSpeedValue.textContent = Number.isFinite(analysis.medianSpeed) || Number.isFinite(analysis.p95Speed)
+          ? `${Number.isFinite(analysis.medianSpeed) ? fmt(analysis.medianSpeed, 0) : "--"} / ${Number.isFinite(analysis.p95Speed) ? fmt(analysis.p95Speed, 0) : "--"} deg/s`
+          : "--";
+        els.endpointJitterValue.textContent = Number.isFinite(analysis.endpointJitter) ? `${fmt(analysis.endpointJitter, 1)} deg` : "--";
+        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency);
+        drawRepOverlay(workout, rep);
       }
 
       function renderGoniometryPanel(frame) {
@@ -5050,6 +5427,8 @@
           <div class="annotation-item">
             <strong>${annotation.issueType || "Marked issue"} | ${annotation.note || `Goniometry ${annotation.kind || "range"} ${index + 1}`}</strong>
             <small>${annotation.kind || "range"} | ${fmt(annotation.startSec, 2)}-${fmt(annotation.endSec, 2)}s | ${annotation.workout} | ${annotation.label} | ${fmt(annotation.min, 1)}-${fmt(annotation.max, 1)} deg, mean ${fmt(annotation.mean, 1)} deg, ROM ${fmt(annotation.range, 1)} deg</small>
+            ${annotation.chartability ? `<small>${escapeHtml(annotation.chartability)} | ${(annotation.chartabilityReasons || []).map(escapeHtml).join(", ")}</small>` : ""}
+            ${annotation.measurementSnippet ? `<small>${escapeHtml(annotation.measurementSnippet)}</small>` : ""}
             <button class="button ghost" type="button" data-annotation-index="${index}">Jump to range</button>
             <button class="button ghost" type="button" data-delete-annotation-index="${index}">Delete</button>
           </div>
@@ -5588,6 +5967,9 @@
           side: metricForSelection()?.side || "",
           workout: currentWorkout(currentTime())?.display_label || currentWorkout(currentTime())?.label || "manual note"
         };
+        const activeMeasurement = activeRomAnalysis();
+        const activeConsistency = activeMeasurement ? repConsistencyForWorkout(activeMeasurement.workout) : null;
+        const activeChartability = activeMeasurement ? chartabilityForRep(activeMeasurement, activeConsistency) : null;
         state.annotations.push({
           id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
           createdAt: new Date().toISOString(),
@@ -5595,6 +5977,9 @@
           issueType: state.issueType,
           note,
           anatomy: state.selectedAnatomy ? anatomyTitle() : "",
+          chartability: activeChartability?.status || "",
+          chartabilityReasons: activeChartability?.reasons || [],
+          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency) : "",
           ...(stats || fallbackStats)
         });
         state.annotations.sort((a, b) => a.startSec - b.startSec);
