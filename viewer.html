@@ -1079,7 +1079,7 @@
         background:
           linear-gradient(180deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.026)),
           rgba(255, 255, 255, 0.04);
-        overflow: hidden;
+        overflow: visible;
         cursor: crosshair;
         user-select: none;
       }
@@ -1580,8 +1580,8 @@
         position: absolute;
         z-index: 24;
         left: var(--comparison-x, 50%);
-        top: 8px;
-        width: min(390px, calc(100% - 24px));
+        top: -58px;
+        width: min(340px, calc(100% - 24px));
         padding: 11px;
         border: 1px solid rgba(23, 23, 23, 0.78);
         border-left: 5px solid var(--amber);
@@ -1638,6 +1638,10 @@
       }
 
       .comparison-popover .comparison-table {
+        margin-top: 8px;
+      }
+
+      .comparison-popover-action {
         margin-top: 8px;
       }
 
@@ -3463,6 +3467,12 @@
         return `Found ${matches} ${label}${refs ? `: ${refs}` : ""}.`;
       }
 
+      function comparisonPromptText(comparison) {
+        const matches = Number(comparison?.match_count || comparison?.reference_candidates?.length || 0);
+        const label = matches === 1 ? "cross-session similar motion" : "cross-session similar motions";
+        return `Found ${matches} ${label}.`;
+      }
+
       function comparisonActionText(comparison) {
         if (!comparison) return "No matching session";
         const matches = Number(comparison.match_count || comparison.reference_candidates?.length || 0);
@@ -3476,7 +3486,7 @@
         state.comparisonAnchorPct = Math.max(18, Math.min(82, pct));
       }
 
-      function renderComparisonPopover(comparison, workout) {
+      function renderComparisonPrompt(comparison, workout) {
         els.comparisonPopover.style.setProperty("--comparison-x", `${state.comparisonAnchorPct}%`);
         els.comparisonPopover.hidden = false;
         const label = workout?.display_label || workout?.label || comparison?.workout_label || "Movement";
@@ -3491,26 +3501,31 @@
             </div>
           `;
         } else {
-          const reference = comparison.reference_session || {};
           els.comparisonPopover.innerHTML = `
             <div class="comparison-popover-head">
               <div>
                 <strong>${escapeHtml(label)}</strong>
-                <small>${escapeHtml(comparisonMatchText(comparison))} Closest same-patient match: ${escapeHtml(shortComparisonSession(reference))}.</small>
+                <small>${escapeHtml(comparisonPromptText(comparison))}</small>
               </div>
               <button class="comparison-popover-close" type="button" aria-label="Close comparison">x</button>
             </div>
-            ${renderComparisonTable(comparison, 4)}
+            <div class="comparison-popover-action">
+              <button class="button ghost" type="button" data-compare-now>Compare now</button>
+            </div>
           `;
         }
         els.comparisonPopover.querySelector(".comparison-popover-close")?.addEventListener("click", (event) => {
           event.stopPropagation();
           els.comparisonPopover.hidden = true;
         });
+        els.comparisonPopover.querySelector("[data-compare-now]")?.addEventListener("click", (event) => {
+          event.stopPropagation();
+          renderComparisonContext(comparison, workout);
+        });
       }
 
-      function renderComparisonContext(comparison, workout, anchorEvent = null) {
-        setComparisonAnchorFromEvent(anchorEvent);
+      function renderComparisonContext(comparison, workout) {
+        els.comparisonPopover.hidden = true;
         state.selectedComparison = comparison || null;
         state.selectedWorkoutKey = workoutKey(workout);
         if (!comparison) {
@@ -3520,7 +3535,6 @@
           els.comparisonSummary.textContent = "No other assigned session for this patient contains the same detected movement primitive.";
           els.comparisonFindings.innerHTML = "";
           els.comparisonDraft.textContent = "";
-          renderComparisonPopover(null, workout);
           renderTimeline();
           renderWorkouts();
           return;
@@ -3532,16 +3546,25 @@
         els.comparisonSummary.textContent = `Closest same-patient match: ${shortComparisonSession(reference)}. Confidence: ${comparison.confidence?.level || "moderate"}.`;
         els.comparisonFindings.innerHTML = renderComparisonTable(comparison);
         els.comparisonDraft.textContent = "Current session and closest same-patient match are shown as measured values; delta is current minus match.";
-        renderComparisonPopover(comparison, workout);
+        renderTimeline();
+        renderWorkouts();
+      }
+
+      function showComparisonPrompt(workout, anchorEvent = null) {
+        stopPlayback();
+        state.romMode = null;
+        setComparisonAnchorFromEvent(anchorEvent);
+        state.selectedComparison = null;
+        state.selectedWorkoutKey = workoutKey(workout);
+        els.comparisonContext.hidden = true;
+        renderComparisonPrompt(comparisonForWorkout(workout), workout);
         renderTimeline();
         renderWorkouts();
       }
 
       function selectWorkoutComparison(workout, anchorEvent = null) {
-        stopPlayback();
-        state.romMode = null;
+        showComparisonPrompt(workout, anchorEvent);
         const midpoint = Number.isFinite(workout?.start_sec) && Number.isFinite(workout?.end_sec) ? (workout.start_sec + workout.end_sec) * 0.5 : currentTime();
-        renderComparisonContext(comparisonForWorkout(workout), workout, anchorEvent);
         seekToTime(midpoint, { updateVideo: true });
       }
 
@@ -5085,7 +5108,11 @@
         const center = SIDE_JOINTS[analysis.metric.side]?.[analysis.metric.joint]?.center;
         if (Number.isInteger(center)) state.selectedAnatomy = { type: "joint", index: center };
         const targetTime = analysis.flexionSample?.t ?? ((rep.start_sec + rep.end_sec) * 0.5);
-        renderComparisonContext(comparisonForWorkout(workout), workout, anchorEvent);
+        setComparisonAnchorFromEvent(anchorEvent);
+        state.selectedComparison = null;
+        state.selectedWorkoutKey = workoutKey(workout);
+        els.comparisonContext.hidden = true;
+        renderComparisonPrompt(comparisonForWorkout(workout), workout);
         renderTimeline();
         renderAnnotationMarkers();
         setFrame(frameIndexForTime(targetTime), { updateVideo: true });
@@ -5170,7 +5197,7 @@
         host.querySelectorAll("[data-compare-workout]").forEach((button) => {
           button.addEventListener("click", () => {
             const workout = workouts.find((item) => workoutKey(item) === button.dataset.compareWorkout);
-            if (workout) selectWorkoutComparison(workout);
+            if (workout) renderComparisonContext(comparisonForWorkout(workout), workout);
           });
         });
       }
