@@ -1629,17 +1629,72 @@
 
       .review-grid {
         display: flex;
-        gap: 8px;
+        gap: 10px;
         overflow-x: auto;
         overscroll-behavior-x: contain;
         padding-bottom: 4px;
         scroll-snap-type: x proximity;
       }
 
-      .review-cell {
-        flex: 0 0 150px;
-        min-height: 62px;
+      .metric-cluster {
+        flex: 0 0 328px;
+        border: 1px solid rgba(23, 23, 23, 0.12);
+        background: rgba(255, 255, 255, 0.64);
         scroll-snap-align: start;
+      }
+
+      .metric-cluster:not([open]) {
+        flex-basis: 220px;
+      }
+
+      .metric-cluster summary {
+        display: grid;
+        gap: 3px;
+        min-height: 58px;
+        padding: 10px;
+        cursor: pointer;
+        list-style: none;
+        border-bottom: 1px solid rgba(23, 23, 23, 0.1);
+      }
+
+      .metric-cluster summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .metric-cluster summary strong {
+        color: var(--ink);
+        font-size: 13px;
+      }
+
+      .metric-cluster summary span {
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .metric-cluster summary::after {
+        content: "+";
+        justify-self: end;
+        margin-top: -35px;
+        color: var(--amber);
+        font-weight: 950;
+      }
+
+      .metric-cluster[open] summary::after {
+        content: "-";
+      }
+
+      .cluster-cells {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+        padding: 8px;
+      }
+
+      .review-cell {
+        min-height: 62px;
         border: 1px solid rgba(23, 23, 23, 0.1);
         padding: 8px;
         background: rgba(255, 255, 255, 0.56);
@@ -2850,50 +2905,90 @@
               <div id="noteSnippet" class="note-snippet">Select a rep to generate chart-ready measurement fields.</div>
             </div>
             <div class="review-grid" aria-label="Selected measurement details">
-              <div class="review-cell"><strong id="jointVisibilityValue">--</strong><span>joint visibility</span></div>
-              <div class="review-cell"><strong id="modelConfidenceValue">--</strong><span>model confidence</span></div>
-              <div class="review-cell"><strong id="kinematicConsistencyValue">--</strong><span>kinematic consistency</span></div>
-              <div class="review-cell"><strong id="measurementConfidenceValue">--</strong><span>measurement confidence</span></div>
-              <div class="review-cell"><strong id="meanRomValue">--</strong><span>mean ROM</span></div>
-              <div class="review-cell"><strong id="romSdValue">--</strong><span>ROM SD</span></div>
-              <div class="review-cell"><strong id="bestWorstRepValue">--</strong><span>best / lowest ROM</span></div>
-              <div class="review-cell"><strong id="repTempoValue">--</strong><span>rep time mean / SD</span></div>
-              <div class="review-cell"><strong id="robustSpeedValue">--</strong><span>median / p95 speed</span></div>
-              <div class="review-cell"><strong id="endpointJitterValue">--</strong><span>endpoint jitter</span></div>
-              <div class="review-cell"><strong id="toEndpointValue">--</strong><span>to endpoint</span></div>
-              <div class="review-cell"><strong id="returnPhaseValue">--</strong><span>return phase</span></div>
-              <div class="review-cell"><strong id="phaseRatioValue">--</strong><span>phase ratio</span></div>
-              <div class="review-cell"><strong id="endpointDwellValue">--</strong><span>endpoint dwell</span></div>
-              <div class="review-cell"><strong id="reversalSmoothnessValue">--</strong><span>reversal smoothness</span></div>
-              <div class="review-cell"><strong id="selectedSideRomValue">--</strong><span>selected-side ROM</span></div>
-              <div class="review-cell"><strong id="oppositeSideRomValue">--</strong><span>opposite-side ROM</span></div>
-              <div class="review-cell"><strong id="sideRomDeltaValue">--</strong><span>side ROM delta</span></div>
-              <div class="review-cell"><strong id="sideSpeedDeltaValue">--</strong><span>side speed delta</span></div>
-              <div class="review-cell"><strong id="sideTimingDeltaValue">--</strong><span>side endpoint delta</span></div>
-              <div class="review-cell"><strong id="trunkLeanValue">--</strong><span>trunk lean range</span></div>
-              <div class="review-cell"><strong id="shoulderHikeValue">--</strong><span>shoulder elevation delta</span></div>
-              <div class="review-cell"><strong id="torsoRotationValue">--</strong><span>torso rotation range</span></div>
-              <div class="review-cell"><strong id="pelvisShiftValue">--</strong><span>pelvis lateral shift</span></div>
-              <div class="review-cell"><strong id="associatedMovementValue">--</strong><span>largest associated movement</span></div>
-              <div class="review-cell"><strong id="romDriftValue">--</strong><span>set ROM drift</span></div>
-              <div class="review-cell"><strong id="tempoDriftValue">--</strong><span>set time drift</span></div>
-              <div class="review-cell"><strong id="speedDriftValue">--</strong><span>set speed drift</span></div>
-              <div class="review-cell"><strong id="endpointDriftValue">--</strong><span>endpoint timing drift</span></div>
-              <div class="review-cell"><strong id="lowestConfidenceRepValue">--</strong><span>lowest-confidence rep</span></div>
-              <div class="review-cell"><strong id="mostDifferentRepValue">--</strong><span>most different ROM rep</span></div>
-              <div class="review-cell"><strong id="notableRepsValue">--</strong><span>notable reps</span></div>
-              <div class="review-cell"><strong id="historyCountValue">--</strong><span>matched history</span></div>
-              <div class="review-cell"><strong id="priorRomValue">--</strong><span>prior workout avg</span></div>
-              <div class="review-cell"><strong id="priorDeltaValue">--</strong><span>current - prior</span></div>
-              <div class="review-cell"><strong id="baselineDeltaValue">--</strong><span>current - baseline</span></div>
-              <div class="review-cell"><strong id="bestHistoricalValue">--</strong><span>best prior avg</span></div>
-              <div class="review-cell"><strong id="priorDoseValue">--</strong><span>prior reps</span></div>
-              <div class="review-cell"><strong id="setDoseValue">--</strong><span>set reps</span></div>
-              <div class="review-cell"><strong id="activeTimeValue">--</strong><span>active time</span></div>
-              <div class="review-cell"><strong id="gapTimeValue">--</strong><span>gap / rest time</span></div>
-              <div class="review-cell"><strong id="setDurationValue">--</strong><span>set duration</span></div>
-              <div class="review-cell"><strong id="romVolumeValue">--</strong><span>ROM volume</span></div>
-              <div class="review-cell"><strong id="repDensityValue">--</strong><span>rep density</span></div>
+              <details class="metric-cluster" open>
+                <summary><strong>Trust</strong><span>chartability inputs</span></summary>
+                <div class="cluster-cells">
+                  <div class="review-cell"><strong id="jointVisibilityValue">--</strong><span>joint visibility</span></div>
+                  <div class="review-cell"><strong id="modelConfidenceValue">--</strong><span>model confidence</span></div>
+                  <div class="review-cell"><strong id="kinematicConsistencyValue">--</strong><span>kinematic consistency</span></div>
+                  <div class="review-cell"><strong id="measurementConfidenceValue">--</strong><span>measurement confidence</span></div>
+                </div>
+              </details>
+              <details class="metric-cluster" open>
+                <summary><strong>ROM + Tempo</strong><span>set shape</span></summary>
+                <div class="cluster-cells">
+                  <div class="review-cell"><strong id="meanRomValue">--</strong><span>mean ROM</span></div>
+                  <div class="review-cell"><strong id="romSdValue">--</strong><span>ROM SD</span></div>
+                  <div class="review-cell"><strong id="bestWorstRepValue">--</strong><span>best / lowest ROM</span></div>
+                  <div class="review-cell"><strong id="repTempoValue">--</strong><span>rep time mean / SD</span></div>
+                  <div class="review-cell"><strong id="robustSpeedValue">--</strong><span>median / p95 speed</span></div>
+                  <div class="review-cell"><strong id="endpointJitterValue">--</strong><span>endpoint jitter</span></div>
+                </div>
+              </details>
+              <details class="metric-cluster">
+                <summary><strong>Phase Control</strong><span>within-rep timing</span></summary>
+                <div class="cluster-cells">
+                  <div class="review-cell"><strong id="toEndpointValue">--</strong><span>to endpoint</span></div>
+                  <div class="review-cell"><strong id="returnPhaseValue">--</strong><span>return phase</span></div>
+                  <div class="review-cell"><strong id="phaseRatioValue">--</strong><span>phase ratio</span></div>
+                  <div class="review-cell"><strong id="endpointDwellValue">--</strong><span>endpoint dwell</span></div>
+                  <div class="review-cell"><strong id="reversalSmoothnessValue">--</strong><span>reversal smoothness</span></div>
+                </div>
+              </details>
+              <details class="metric-cluster">
+                <summary><strong>Side To Side</strong><span>bilateral context</span></summary>
+                <div class="cluster-cells">
+                  <div class="review-cell"><strong id="selectedSideRomValue">--</strong><span>selected-side ROM</span></div>
+                  <div class="review-cell"><strong id="oppositeSideRomValue">--</strong><span>opposite-side ROM</span></div>
+                  <div class="review-cell"><strong id="sideRomDeltaValue">--</strong><span>side ROM delta</span></div>
+                  <div class="review-cell"><strong id="sideSpeedDeltaValue">--</strong><span>side speed delta</span></div>
+                  <div class="review-cell"><strong id="sideTimingDeltaValue">--</strong><span>side endpoint delta</span></div>
+                </div>
+              </details>
+              <details class="metric-cluster">
+                <summary><strong>Associated Movement</strong><span>skeleton context</span></summary>
+                <div class="cluster-cells">
+                  <div class="review-cell"><strong id="trunkLeanValue">--</strong><span>trunk lean range</span></div>
+                  <div class="review-cell"><strong id="shoulderHikeValue">--</strong><span>shoulder elevation delta</span></div>
+                  <div class="review-cell"><strong id="torsoRotationValue">--</strong><span>torso rotation range</span></div>
+                  <div class="review-cell"><strong id="pelvisShiftValue">--</strong><span>pelvis lateral shift</span></div>
+                  <div class="review-cell"><strong id="associatedMovementValue">--</strong><span>largest associated movement</span></div>
+                </div>
+              </details>
+              <details class="metric-cluster">
+                <summary><strong>Set Drift</strong><span>notable reps</span></summary>
+                <div class="cluster-cells">
+                  <div class="review-cell"><strong id="romDriftValue">--</strong><span>set ROM drift</span></div>
+                  <div class="review-cell"><strong id="tempoDriftValue">--</strong><span>set time drift</span></div>
+                  <div class="review-cell"><strong id="speedDriftValue">--</strong><span>set speed drift</span></div>
+                  <div class="review-cell"><strong id="endpointDriftValue">--</strong><span>endpoint timing drift</span></div>
+                  <div class="review-cell"><strong id="lowestConfidenceRepValue">--</strong><span>lowest-confidence rep</span></div>
+                  <div class="review-cell"><strong id="mostDifferentRepValue">--</strong><span>most different ROM rep</span></div>
+                  <div class="review-cell"><strong id="notableRepsValue">--</strong><span>notable reps</span></div>
+                </div>
+              </details>
+              <details class="metric-cluster">
+                <summary><strong>History</strong><span>same-patient context</span></summary>
+                <div class="cluster-cells">
+                  <div class="review-cell"><strong id="historyCountValue">--</strong><span>matched history</span></div>
+                  <div class="review-cell"><strong id="priorRomValue">--</strong><span>prior workout avg</span></div>
+                  <div class="review-cell"><strong id="priorDeltaValue">--</strong><span>current - prior</span></div>
+                  <div class="review-cell"><strong id="baselineDeltaValue">--</strong><span>current - baseline</span></div>
+                  <div class="review-cell"><strong id="bestHistoricalValue">--</strong><span>best prior avg</span></div>
+                  <div class="review-cell"><strong id="priorDoseValue">--</strong><span>prior reps</span></div>
+                </div>
+              </details>
+              <details class="metric-cluster">
+                <summary><strong>Dose</strong><span>work completed</span></summary>
+                <div class="cluster-cells">
+                  <div class="review-cell"><strong id="setDoseValue">--</strong><span>set reps</span></div>
+                  <div class="review-cell"><strong id="activeTimeValue">--</strong><span>active time</span></div>
+                  <div class="review-cell"><strong id="gapTimeValue">--</strong><span>gap / rest time</span></div>
+                  <div class="review-cell"><strong id="setDurationValue">--</strong><span>set duration</span></div>
+                  <div class="review-cell"><strong id="romVolumeValue">--</strong><span>ROM volume</span></div>
+                  <div class="review-cell"><strong id="repDensityValue">--</strong><span>rep density</span></div>
+                </div>
+              </details>
             </div>
           </div>
         </article>
