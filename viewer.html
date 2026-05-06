@@ -2609,6 +2609,11 @@
                     <div class="review-cell"><strong id="phaseRatioValue">--</strong><span>phase ratio</span></div>
                     <div class="review-cell"><strong id="endpointDwellValue">--</strong><span>endpoint dwell</span></div>
                     <div class="review-cell"><strong id="reversalSmoothnessValue">--</strong><span>reversal smoothness</span></div>
+                    <div class="review-cell"><strong id="selectedSideRomValue">--</strong><span>selected-side ROM</span></div>
+                    <div class="review-cell"><strong id="oppositeSideRomValue">--</strong><span>opposite-side ROM</span></div>
+                    <div class="review-cell"><strong id="sideRomDeltaValue">--</strong><span>side ROM delta</span></div>
+                    <div class="review-cell"><strong id="sideSpeedDeltaValue">--</strong><span>side speed delta</span></div>
+                    <div class="review-cell"><strong id="sideTimingDeltaValue">--</strong><span>side endpoint delta</span></div>
                   </div>
                   <canvas id="repOverlay" class="rep-overlay"></canvas>
                   <div id="noteSnippet" class="note-snippet">Select a rep to generate chart-ready measurement fields.</div>
@@ -2874,6 +2879,11 @@
         phaseRatioValue: document.getElementById("phaseRatioValue"),
         endpointDwellValue: document.getElementById("endpointDwellValue"),
         reversalSmoothnessValue: document.getElementById("reversalSmoothnessValue"),
+        selectedSideRomValue: document.getElementById("selectedSideRomValue"),
+        oppositeSideRomValue: document.getElementById("oppositeSideRomValue"),
+        sideRomDeltaValue: document.getElementById("sideRomDeltaValue"),
+        sideSpeedDeltaValue: document.getElementById("sideSpeedDeltaValue"),
+        sideTimingDeltaValue: document.getElementById("sideTimingDeltaValue"),
         repOverlay: document.getElementById("repOverlay"),
         noteSnippet: document.getElementById("noteSnippet"),
         comparisonContext: document.getElementById("comparisonContext"),
@@ -4105,6 +4115,52 @@
         };
       }
 
+      function summarizeMetricSamples(samples, metric, rep) {
+        if (!samples.length || !metric || !rep) return null;
+        const minSample = samples.reduce((best, sample) => sample.angle < best.angle ? sample : best, samples[0]);
+        const maxSample = samples.reduce((best, sample) => sample.angle > best.angle ? sample : best, samples[0]);
+        const isElbow = metric.joint === "elbow";
+        const endpointSample = isElbow ? minSample : maxSample;
+        const speeds = angularSpeeds(samples);
+        const rom = maxSample.angle - minSample.angle;
+        return {
+          minSample,
+          maxSample,
+          endpointSample,
+          rom,
+          medianSpeed: percentile(speeds, 0.5),
+          p95Speed: percentile(speeds, 0.95),
+          phases: phaseTiming(samples, rep, endpointSample, rom)
+        };
+      }
+
+      function sideToSideAnalysis(analysis) {
+        const side = analysis?.metric?.side;
+        if (!analysis?.rep || !["left", "right"].includes(side)) return null;
+        const oppositeSide = side === "left" ? "right" : "left";
+        const oppositeMetric = {
+          ...analysis.metric,
+          side: oppositeSide,
+          label: `${sideLabel(oppositeSide)} ${analysis.metric.label.replace(/^Left |^Right /, "")}`
+        };
+        const oppositeSamples = samplesForMetricRange(oppositeMetric, analysis.rep.start_sec, analysis.rep.end_sec);
+        const opposite = summarizeMetricSamples(oppositeSamples, oppositeMetric, analysis.rep);
+        if (!opposite) return null;
+        return {
+          selectedSide: side,
+          oppositeSide,
+          selectedRom: analysis.rom,
+          oppositeRom: opposite.rom,
+          romDelta: analysis.rom - opposite.rom,
+          selectedMedianSpeed: analysis.medianSpeed,
+          oppositeMedianSpeed: opposite.medianSpeed,
+          speedDelta: Number.isFinite(analysis.medianSpeed) && Number.isFinite(opposite.medianSpeed) ? analysis.medianSpeed - opposite.medianSpeed : null,
+          endpointTimingDelta: Number.isFinite(analysis.phases?.toEndpoint) && Number.isFinite(opposite.phases?.toEndpoint)
+            ? analysis.phases.toEndpoint - opposite.phases.toEndpoint
+            : null
+        };
+      }
+
       function angleStatsForRange(startSec, endSec) {
         const lo = Math.min(startSec, endSec);
         const hi = Math.max(startSec, endSec);
@@ -4278,13 +4334,31 @@
         return Number.isFinite(Number(value)) ? `${fmt(Number(value), 2)}s` : "--";
       }
 
+      function signedDegrees(value) {
+        if (!Number.isFinite(Number(value))) return "--";
+        const numeric = Number(value);
+        return `${numeric > 0 ? "+" : ""}${fmt(numeric, 1)} deg`;
+      }
+
+      function signedSpeed(value) {
+        if (!Number.isFinite(Number(value))) return "--";
+        const numeric = Number(value);
+        return `${numeric > 0 ? "+" : ""}${fmt(numeric, 0)} deg/s`;
+      }
+
+      function signedSeconds(value) {
+        if (!Number.isFinite(Number(value))) return "--";
+        const numeric = Number(value);
+        return `${numeric > 0 ? "+" : ""}${fmt(numeric, 2)}s`;
+      }
+
       function setChartabilityChip(result) {
         els.chartabilityChip.textContent = result.status;
         els.chartabilityChip.className = `chartability-chip ${result.className}`;
         els.chartabilityReasons.innerHTML = result.reasons.map((reason) => `<span class="reason-chip">${escapeHtml(reason)}</span>`).join("");
       }
 
-      function measurementSnippet(analysis, chartability, consistency) {
+      function measurementSnippet(analysis, chartability, consistency, sideComparison = null) {
         const workout = analysis.workout?.display_label || analysis.workout?.label || "movement";
         const rep = analysis.rep?.index ?? "?";
         const metric = analysis.metric?.label || "measured angle";
@@ -4295,7 +4369,8 @@
         const phase = analysis.phases
           ? ` | phases ${secondsValue(analysis.phases.toEndpoint)} / ${secondsValue(analysis.phases.returnPhase)}`
           : "";
-        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
+        const sideDelta = sideComparison ? ` | side ROM delta ${signedDegrees(sideComparison.romDelta)}` : "";
+        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase}${sideDelta} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
       }
 
       function activeRomAnalysis() {
@@ -5360,6 +5435,7 @@
         const { workout, rep, metric, flexionSample, extensionSample, rom, peakPct, visibility } = analysis;
         const consistency = repConsistencyForWorkout(workout);
         const chartability = chartabilityForRep(analysis, consistency);
+        const sideComparison = sideToSideAnalysis(analysis);
         const workoutLabel = workout.display_label || workout.label || "Movement";
         const flexionDescriptor = metric.joint === "elbow" ? "smallest internal angle" : "largest measured elevation";
         els.romFlexionLabel.textContent = metric.joint === "elbow" ? "max flexion" : "peak elevation";
@@ -5401,7 +5477,16 @@
           : "--";
         els.endpointDwellValue.textContent = secondsValue(analysis.phases?.endpointDwell);
         els.reversalSmoothnessValue.textContent = chartPercent(analysis.phases?.reversalSmoothness);
-        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency);
+        els.selectedSideRomValue.textContent = Number.isFinite(sideComparison?.selectedRom)
+          ? `${sideLabel(sideComparison.selectedSide)} ${fmt(sideComparison.selectedRom, 1)} deg`
+          : "--";
+        els.oppositeSideRomValue.textContent = Number.isFinite(sideComparison?.oppositeRom)
+          ? `${sideLabel(sideComparison.oppositeSide)} ${fmt(sideComparison.oppositeRom, 1)} deg`
+          : "--";
+        els.sideRomDeltaValue.textContent = signedDegrees(sideComparison?.romDelta);
+        els.sideSpeedDeltaValue.textContent = signedSpeed(sideComparison?.speedDelta);
+        els.sideTimingDeltaValue.textContent = signedSeconds(sideComparison?.endpointTimingDelta);
+        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency, sideComparison);
         drawRepOverlay(workout, rep);
       }
 
@@ -6048,6 +6133,7 @@
         const activeMeasurement = activeRomAnalysis();
         const activeConsistency = activeMeasurement ? repConsistencyForWorkout(activeMeasurement.workout) : null;
         const activeChartability = activeMeasurement ? chartabilityForRep(activeMeasurement, activeConsistency) : null;
+        const activeSideComparison = activeMeasurement ? sideToSideAnalysis(activeMeasurement) : null;
         state.annotations.push({
           id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
           createdAt: new Date().toISOString(),
@@ -6057,7 +6143,8 @@
           anatomy: state.selectedAnatomy ? anatomyTitle() : "",
           chartability: activeChartability?.status || "",
           chartabilityReasons: activeChartability?.reasons || [],
-          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency) : "",
+          sideRomDelta: activeSideComparison?.romDelta ?? null,
+          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency, activeSideComparison) : "",
           ...(stats || fallbackStats)
         });
         state.annotations.sort((a, b) => a.startSec - b.startSec);
