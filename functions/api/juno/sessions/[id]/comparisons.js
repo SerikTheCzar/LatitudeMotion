@@ -58,11 +58,11 @@ function confidenceFor(current, reference) {
   const scores = [current.confidence, current.pose_confidence, reference.confidence, reference.pose_confidence]
     .map(Number)
     .filter(Number.isFinite);
-  if (!scores.length) return { level: "moderate", reason: "Workout segmentation was available, but confidence metadata was limited." };
+  if (!scores.length) return { level: "moderate", reason: "Movement segmentation was available, but confidence metadata was limited." };
   const avg = mean(scores);
-  if (avg >= 0.75) return { level: "high", reason: "Both matching workout segments had strong model confidence." };
-  if (avg >= 0.45) return { level: "moderate", reason: "Comparable workout segments were found, with moderate pose or segmentation confidence." };
-  return { level: "needs review", reason: "Comparable segments were found, but model confidence was low enough for PT review." };
+  if (avg >= 0.75) return { level: "high", reason: "Both same-patient movement segments had strong model confidence." };
+  if (avg >= 0.45) return { level: "moderate", reason: "Same-patient movement segments were found, with moderate pose or segmentation confidence." };
+  return { level: "needs review", reason: "Same-patient movement segments were found, but model confidence was low enough for PT review." };
 }
 
 function finding(kind, label, message, metric, change = null) {
@@ -123,7 +123,20 @@ function headline(label, findings) {
 
 function documentationDraft(label, findings, current, referenceSession) {
   const primary = findings[0]?.message || `${label} was comparable to the matched prior session.`;
-  return `Compared with ${referenceSession.client_label || "the matched session"} (${referenceSession.existing_session_id || referenceSession.id}), ${primary} Current set: ${current.rep_count} reps.`;
+  return `Compared with same-patient session ${referenceSession.existing_session_id || referenceSession.id}, ${primary} Current set: ${current.rep_count} reps.`;
+}
+
+function compactReference(candidate) {
+  return {
+    session: publicSession(candidate.session),
+    workout: {
+      label: displayLabel(candidate.workout),
+      start_sec: candidate.workout?.start_sec ?? null,
+      end_sec: candidate.workout?.end_sec ?? null,
+      rep_count: candidate.workout?.rep_count ?? candidate.workout?.reps?.length ?? 0,
+    },
+    metrics: workoutMetrics(candidate.workout),
+  };
 }
 
 async function analysisForSession(env, session, links) {
@@ -182,6 +195,8 @@ export async function onRequestGet({ env, params, request }) {
       workout_key: workoutKey,
       workout_label: label,
       reference_session: publicSession(reference.session),
+      match_count: candidates.length,
+      reference_candidates: candidates.map(compactReference).slice(0, 4),
       current: { workout: currentWorkout, metrics: currentMetrics },
       reference: { workout: reference.workout, metrics: referenceMetrics },
       headline: headline(label, findings),
