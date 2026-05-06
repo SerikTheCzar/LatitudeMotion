@@ -1849,6 +1849,41 @@
         justify-self: start;
       }
 
+      .annotation-meta,
+      .annotation-chip-row,
+      .annotation-actions-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+
+      .annotation-chip {
+        border: 1px solid var(--line);
+        padding: 3px 7px;
+        background: rgba(255, 255, 255, 0.58);
+        color: var(--ink);
+        font-size: 11px;
+        font-weight: 850;
+      }
+
+      .annotation-chip.synced {
+        border-color: rgba(34, 197, 94, 0.42);
+        color: #166534;
+      }
+
+      .annotation-chip.local {
+        border-color: rgba(194, 65, 12, 0.42);
+        color: var(--amber);
+      }
+
+      .chart-note-text {
+        border-left: 3px solid var(--amber);
+        padding: 7px 9px;
+        background: rgba(255, 247, 237, 0.74);
+        color: var(--ink) !important;
+      }
+
       .annotation-item small {
         color: var(--muted);
         line-height: 1.35;
@@ -5304,7 +5339,7 @@
         els.floatingNoteInput.value = "";
       }
 
-      function saveFloatingNote() {
+      async function saveFloatingNote() {
         const target = state.floatingNoteTarget;
         const note = els.floatingNoteInput.value.trim();
         if (!target) return;
@@ -5313,7 +5348,15 @@
           return;
         }
         els.annotationNote.value = note;
-        const saved = saveAnnotation(target.kind, target.start, target.end);
+        els.floatingNoteSaveBtn.disabled = true;
+        els.floatingNoteSaveBtn.textContent = "Saving";
+        let saved = false;
+        try {
+          saved = await saveAnnotation(target.kind, target.start, target.end);
+        } finally {
+          els.floatingNoteSaveBtn.disabled = false;
+          els.floatingNoteSaveBtn.textContent = "Save note";
+        }
         if (saved) closeFloatingNote();
       }
 
@@ -5792,10 +5835,32 @@
         renderAnnotationDraft();
       }
 
-      function loadAnnotations() {
+      async function loadAnnotations() {
+        const localAnnotations = (() => {
+          try {
+            const parsed = JSON.parse(localStorage.getItem(ANNOTATION_KEY) || "[]");
+            return Array.isArray(parsed) ? parsed.map(annotationFromCanonical) : [];
+          } catch {
+            return [];
+          }
+        })();
+        if (location.protocol !== "file:") {
+          try {
+            const response = await fetch(noteApiUrl(), { cache: "no-store", credentials: "same-origin" });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) throw new Error(payload.detail || `Could not load notes (${response.status})`);
+            const canonical = Array.isArray(payload.notes) ? payload.notes.map(annotationFromCanonical) : [];
+            const unsynced = localAnnotations.filter((annotation) => annotation.syncStatus === "local" && !annotation.serverId);
+            state.annotations = [...canonical, ...unsynced].sort((a, b) => a.startSec - b.startSec);
+            saveAnnotations();
+            return;
+          } catch (error) {
+            console.warn(error);
+          }
+        }
         try {
           const parsed = JSON.parse(localStorage.getItem(ANNOTATION_KEY) || "[]");
-          state.annotations = Array.isArray(parsed) ? parsed : [];
+          state.annotations = Array.isArray(parsed) ? parsed.map(annotationFromCanonical) : [];
         } catch {
           state.annotations = [];
         }
@@ -5803,6 +5868,273 @@
 
       function saveAnnotations() {
         localStorage.setItem(ANNOTATION_KEY, JSON.stringify(state.annotations));
+      }
+
+      function noteApiUrl() {
+        return `/api/juno/sessions/${encodeURIComponent(SESSION_RECORD_ID)}/notes`;
+      }
+
+      function noteDeepLink(anchor = {}) {
+        const url = new URL(location.href);
+        url.searchParams.set("session", SESSION_RECORD_ID);
+        url.searchParams.set("t", fmt(anchor.startSec ?? currentTime(), 2));
+        return url.toString();
+      }
+
+      function chartNoteFromAnchor(note) {
+        const metric = note.metric || {};
+        const workout = note.workout || {};
+        const rep = note.rep || {};
+        const chartability = note.chartability || {};
+        const dose = note.dose || {};
+        const pieces = [];
+        const subject = `${metric.label || note.label || "Measured movement"} during ${workout.label || note.workout || "session review"}${Number.isFinite(Number(rep.index)) ? `, rep ${rep.index}` : ""}`;
+        if (Number.isFinite(Number(metric.activeRom))) {
+          pieces.push(`${subject}: active ROM ${fmt(metric.activeRom, 1)} deg from ${fmt(metric.minAngle, 1)} deg to ${fmt(metric.maxAngle, 1)} deg.`);
+        } else {
+          pieces.push(`${subject}: range ${fmt(note.startSec, 2)}-${fmt(note.endSec, 2)}s.`);
+        }
+        if (chartability.status) pieces.push(`Chartability: ${chartability.status}.`);
+        if (Number.isFinite(Number(dose.setReps))) {
+          pieces.push(`Completed set: ${dose.setReps} reps, ${secondsValue(dose.activeTime)} active time${Number.isFinite(Number(metric.romSd)) ? `, ROM SD ${fmt(metric.romSd, 1)} deg` : ""}.`);
+        }
+        if (Number.isFinite(Number(note.comparison?.priorDelta))) pieces.push(`Current-prior delta: ${signedDegrees(note.comparison.priorDelta)}.`);
+        if (note.freeText) pieces.push(`Clinician note: ${note.freeText}`);
+        return pieces.join(" ");
+      }
+
+      function annotationFromCanonical(note = {}) {
+        const anchor = note.anchor || {};
+        const metric = note.metric || {};
+        const workout = note.workout || {};
+        const rep = note.rep || {};
+        const chartability = note.chartability || {};
+        const chartNote = note.chart_note || note.chartNote || note.body || note.measurementSnippet || chartNoteFromAnchor({ ...note, anchor, metric, workout, rep, chartability });
+        return {
+          id: note.id || note.client_note_id || note.clientNoteId || `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          serverId: String(note.id || "").startsWith("note_") ? note.id : (note.serverId || ""),
+          clientNoteId: note.client_note_id || note.clientNoteId || "",
+          syncStatus: note.syncStatus || (String(note.id || "").startsWith("note_") ? "synced" : "local"),
+          createdAt: note.created_at || note.createdAt || new Date().toISOString(),
+          kind: anchor.kind || note.kind || "range",
+          issueType: note.note_type || note.noteType || note.issueType || "ROM note",
+          note: note.free_text || note.freeText || note.note || "",
+          anatomy: note.anatomy || metric.label || "",
+          startSec: Number(anchor.startSec ?? note.startSec ?? 0),
+          endSec: Number(anchor.endSec ?? note.endSec ?? anchor.startSec ?? note.startSec ?? 0),
+          startFrame: Number(anchor.startFrame ?? note.startFrame ?? 0),
+          endFrame: Number(anchor.endFrame ?? note.endFrame ?? anchor.startFrame ?? note.startFrame ?? 0),
+          workout: workout.label || note.workout || "manual note",
+          workoutKey: workout.key || "",
+          repIndex: Number.isFinite(Number(rep.index)) ? Number(rep.index) : null,
+          label: metric.label || note.label || "active angle",
+          side: metric.side || note.side || "",
+          min: metric.minAngle ?? note.min ?? null,
+          max: metric.maxAngle ?? note.max ?? null,
+          mean: metric.meanAngle ?? note.mean ?? null,
+          range: metric.activeRom ?? note.range ?? null,
+          sampleCount: metric.sampleCount ?? note.sampleCount ?? 0,
+          chartability: chartability.status || note.chartability || "",
+          chartabilityReasons: chartability.reasons || note.chartabilityReasons || [],
+          sideRomDelta: note.side_to_side?.romDelta ?? note.sideToSide?.romDelta ?? note.sideRomDelta ?? null,
+          associatedMovement: note.associated_movement?.label || note.associatedMovement || "",
+          setRomDrift: note.set_drift?.romDrift ?? note.setDrift?.romDrift ?? note.setRomDrift ?? null,
+          notableReps: note.set_drift?.notableReps || note.notableReps || [],
+          priorRomDelta: note.comparison?.priorDelta ?? note.priorRomDelta ?? null,
+          doseReps: note.dose?.setReps ?? note.doseReps ?? null,
+          doseActiveTime: note.dose?.activeTime ?? note.doseActiveTime ?? null,
+          doseRepDensity: note.dose?.repDensity ?? note.doseRepDensity ?? null,
+          measurementSnippet: note.measurementSnippet || chartNote,
+          chartNote,
+          deepLink: note.deep_link || note.deepLink || "",
+          anchorDetail: anchor,
+          workoutDetail: workout,
+          repDetail: rep,
+          metricDetail: metric,
+          chartabilityDetail: chartability,
+          doseDetail: note.dose || {},
+          comparisonDetail: note.comparison || {},
+          sideToSideDetail: note.side_to_side || note.sideToSide || {},
+          associatedMovementDetail: note.associated_movement || note.associatedMovement || {},
+          setDriftDetail: note.set_drift || note.setDrift || {}
+        };
+      }
+
+      function buildAnchoredNote(kind, start, end, noteText, stats) {
+        const startSec = Math.min(start, end);
+        const endSec = Math.max(start, end);
+        const midSec = (startSec + endSec) * 0.5;
+        const activeMeasurement = activeRomAnalysis();
+        const activeConsistency = activeMeasurement ? repConsistencyForWorkout(activeMeasurement.workout) : null;
+        const activeChartability = activeMeasurement ? chartabilityForRep(activeMeasurement, activeConsistency) : null;
+        const activeSideComparison = activeMeasurement ? sideToSideAnalysis(activeMeasurement) : null;
+        const activeCompensation = activeMeasurement ? compensationAnalysis(activeMeasurement) : null;
+        const activeDrift = activeConsistency ? setDriftAnalysis(activeConsistency) : null;
+        const activeProgression = activeMeasurement ? historicalProgression(activeMeasurement, activeConsistency) : null;
+        const activeDose = activeMeasurement ? workoutDose(activeMeasurement.workout, activeConsistency) : null;
+        const workout = activeMeasurement?.workout || currentWorkout(midSec);
+        const rep = activeMeasurement?.rep || currentRep(midSec);
+        const metric = activeMeasurement?.metric || metricForSelection();
+        const clientNoteId = `local_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        const anchor = {
+          sessionId: SESSION_RECORD_ID,
+          existingSessionId: SESSION_ID,
+          runId: RUN_ID,
+          kind,
+          startSec,
+          endSec,
+          startFrame: frameIndexForTime(startSec),
+          endFrame: frameIndexForTime(endSec)
+        };
+        const canonical = {
+          id: clientNoteId,
+          clientNoteId,
+          syncStatus: "local",
+          source: "viewer",
+          createdAt: new Date().toISOString(),
+          createdBy: window.latitudeAuth?.user?.email || window.latitudeAuth?.user?.name || "",
+          noteType: state.issueType,
+          freeText: noteText,
+          anchor,
+          workout: {
+            key: workoutKey(workout || {}),
+            label: workout?.display_label || workout?.label || stats?.workout || "manual note",
+            startSec: workout?.start_sec ?? null,
+            endSec: workout?.end_sec ?? null
+          },
+          rep: rep ? {
+            index: rep.index ?? null,
+            startSec: rep.start_sec ?? null,
+            endSec: rep.end_sec ?? null
+          } : {},
+          metric: {
+            label: metric?.label || stats?.label || "active angle",
+            side: metric?.side || stats?.side || "",
+            joint: metric?.joint || "",
+            minAngle: activeMeasurement?.minSample?.angle ?? stats?.min ?? null,
+            maxAngle: activeMeasurement?.maxSample?.angle ?? stats?.max ?? null,
+            activeRom: activeMeasurement?.rom ?? stats?.range ?? null,
+            meanAngle: stats?.mean ?? null,
+            sampleCount: stats?.sampleCount ?? activeMeasurement?.samples?.length ?? 0,
+            romSd: activeConsistency?.sdRom ?? null
+          },
+          chartability: activeChartability ? {
+            status: activeChartability.status,
+            reasons: activeChartability.reasons,
+            jointVisibility: activeChartability.jointVisibility,
+            modelConfidence: activeChartability.modelConfidence,
+            kinematicConsistency: activeChartability.kinematicConsistency,
+            measurementConfidence: activeChartability.measurementConfidence
+          } : {},
+          dose: activeDose ? {
+            setReps: activeDose.repCount,
+            activeTime: activeDose.activeTime,
+            gapTime: activeDose.gapTime,
+            setDuration: activeDose.setDuration,
+            romVolume: activeDose.romVolume,
+            repDensity: activeDose.repDensity
+          } : {},
+          comparison: activeProgression ? {
+            priorDelta: activeProgression.priorDelta,
+            baselineDelta: activeProgression.baselineDelta,
+            priorSessionId: activeProgression.prior?.session?.id || "",
+            priorSessionLabel: activeProgression.prior?.session ? shortComparisonSession(activeProgression.prior.session) : ""
+          } : {},
+          sideToSide: activeSideComparison || {},
+          associatedMovement: activeCompensation?.largest ? {
+            label: associatedMovementLabel(activeCompensation.largest),
+            ...activeCompensation.largest
+          } : {},
+          setDrift: activeDrift ? {
+            romDrift: activeDrift.romDrift,
+            durationDrift: activeDrift.durationDrift,
+            speedDrift: activeDrift.speedDrift,
+            endpointTimingDrift: activeDrift.endpointTimingDrift,
+            notableReps: activeDrift.notableLabels || []
+          } : {},
+          deepLink: noteDeepLink(anchor)
+        };
+        canonical.chartNote = chartNoteFromAnchor(canonical);
+        canonical.body = canonical.chartNote;
+        return annotationFromCanonical(canonical);
+      }
+
+      function notePayload(annotation) {
+        return {
+          client_note_id: annotation.clientNoteId || annotation.id,
+          note_type: annotation.issueType,
+          free_text: annotation.note,
+          body: annotation.chartNote || annotation.measurementSnippet || annotation.note,
+          chart_note: annotation.chartNote || annotation.measurementSnippet || annotation.note,
+          source: "viewer",
+          anchor: {
+            sessionId: SESSION_RECORD_ID,
+            existingSessionId: SESSION_ID,
+            runId: RUN_ID,
+            kind: annotation.kind,
+            startSec: annotation.startSec,
+            endSec: annotation.endSec,
+            startFrame: annotation.startFrame,
+            endFrame: annotation.endFrame
+          },
+          workout: {
+            key: annotation.workoutKey || "",
+            label: annotation.workout,
+            startSec: currentWorkout(annotation.startSec)?.start_sec ?? null,
+            endSec: currentWorkout(annotation.startSec)?.end_sec ?? null
+          },
+          rep: Number.isFinite(Number(annotation.repIndex)) ? { index: annotation.repIndex } : {},
+          metric: {
+            label: annotation.label,
+            side: annotation.side,
+            minAngle: annotation.min,
+            maxAngle: annotation.max,
+            activeRom: annotation.range,
+            meanAngle: annotation.mean,
+            sampleCount: annotation.sampleCount
+          },
+          chartability: annotation.chartabilityDetail || {
+            status: annotation.chartability,
+            reasons: annotation.chartabilityReasons || []
+          },
+          dose: annotation.doseDetail || {
+            setReps: annotation.doseReps,
+            activeTime: annotation.doseActiveTime,
+            repDensity: annotation.doseRepDensity
+          },
+          comparison: annotation.comparisonDetail || {
+            priorDelta: annotation.priorRomDelta
+          },
+          side_to_side: annotation.sideToSideDetail || {
+            romDelta: annotation.sideRomDelta
+          },
+          associated_movement: annotation.associatedMovementDetail || {
+            label: annotation.associatedMovement
+          },
+          set_drift: annotation.setDriftDetail || {
+            romDrift: annotation.setRomDrift,
+            notableReps: annotation.notableReps || []
+          },
+          deep_link: annotation.deepLink
+        };
+      }
+
+      async function persistAnnotation(annotation) {
+        if (location.protocol === "file:") return annotation;
+        try {
+          const response = await fetch(noteApiUrl(), {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(notePayload(annotation))
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(payload.detail || `Note save failed (${response.status})`);
+          return annotationFromCanonical(payload.note);
+        } catch (error) {
+          console.warn(error);
+          return { ...annotation, syncStatus: "local" };
+        }
       }
 
       function renderAnnotationDraft() {
@@ -5870,11 +6202,25 @@
         els.annotationList.innerHTML = state.annotations.map((annotation, index) => `
           <div class="annotation-item">
             <strong>${annotation.issueType || "Marked issue"} | ${annotation.note || `Goniometry ${annotation.kind || "range"} ${index + 1}`}</strong>
-            <small>${annotation.kind || "range"} | ${fmt(annotation.startSec, 2)}-${fmt(annotation.endSec, 2)}s | ${annotation.workout} | ${annotation.label} | ${fmt(annotation.min, 1)}-${fmt(annotation.max, 1)} deg, mean ${fmt(annotation.mean, 1)} deg, ROM ${fmt(annotation.range, 1)} deg</small>
-            ${annotation.chartability ? `<small>${escapeHtml(annotation.chartability)} | ${(annotation.chartabilityReasons || []).map(escapeHtml).join(", ")}</small>` : ""}
-            ${annotation.measurementSnippet ? `<small>${escapeHtml(annotation.measurementSnippet)}</small>` : ""}
-            <button class="button ghost" type="button" data-annotation-index="${index}">Jump to range</button>
-            <button class="button ghost" type="button" data-delete-annotation-index="${index}">Delete</button>
+            <div class="annotation-meta">
+              <span class="annotation-chip ${annotation.syncStatus === "synced" ? "synced" : "local"}">${annotation.syncStatus === "synced" ? "saved" : "local"}</span>
+              <span class="annotation-chip">${escapeHtml(annotation.workout)}</span>
+              ${Number.isFinite(Number(annotation.repIndex)) ? `<span class="annotation-chip">rep ${annotation.repIndex}</span>` : ""}
+              <span class="annotation-chip">${fmt(annotation.startSec, 2)}-${fmt(annotation.endSec, 2)}s</span>
+            </div>
+            <small>${annotation.label} | ${fmt(annotation.min, 1)}-${fmt(annotation.max, 1)} deg | ROM ${fmt(annotation.range, 1)} deg | mean ${fmt(annotation.mean, 1)} deg</small>
+            <div class="annotation-chip-row">
+              ${annotation.chartability ? `<span class="annotation-chip">${escapeHtml(annotation.chartability)}</span>` : ""}
+              ${Number.isFinite(Number(annotation.doseReps)) ? `<span class="annotation-chip">${annotation.doseReps} reps</span>` : ""}
+              ${Number.isFinite(Number(annotation.priorRomDelta)) ? `<span class="annotation-chip">prior ${signedDegrees(annotation.priorRomDelta)}</span>` : ""}
+              ${(annotation.chartabilityReasons || []).slice(0, 3).map((reason) => `<span class="annotation-chip">${escapeHtml(reason)}</span>`).join("")}
+            </div>
+            ${annotation.chartNote ? `<small class="chart-note-text">${escapeHtml(annotation.chartNote)}</small>` : ""}
+            <div class="annotation-actions-row">
+              <button class="button ghost" type="button" data-annotation-index="${index}">Jump</button>
+              <button class="button ghost" type="button" data-copy-annotation-index="${index}">Copy chart note</button>
+              <button class="button ghost" type="button" data-delete-annotation-index="${index}">Delete</button>
+            </div>
           </div>
         `).join("");
         els.annotationList.querySelectorAll("[data-annotation-index]").forEach((button) => {
@@ -5884,14 +6230,58 @@
             setFrame(Math.max(0, target));
           });
         });
-        els.annotationList.querySelectorAll("[data-delete-annotation-index]").forEach((button) => {
-          button.addEventListener("click", () => {
-            state.annotations.splice(Number(button.dataset.deleteAnnotationIndex), 1);
-            saveAnnotations();
-            renderAnnotations();
-            renderGoniometryPanel(state.frames[state.frameIndex]);
+        els.annotationList.querySelectorAll("[data-copy-annotation-index]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            const annotation = state.annotations[Number(button.dataset.copyAnnotationIndex)];
+            await copyText(annotation.chartNote || annotation.measurementSnippet || annotation.note || "");
+            button.textContent = "Copied";
+            setTimeout(() => { button.textContent = "Copy chart note"; }, 1200);
           });
         });
+        els.annotationList.querySelectorAll("[data-delete-annotation-index]").forEach((button) => {
+          button.addEventListener("click", async () => {
+            await deleteAnnotation(Number(button.dataset.deleteAnnotationIndex));
+          });
+        });
+      }
+
+      async function copyText(value) {
+        const text = String(value || "");
+        if (navigator.clipboard?.writeText && location.protocol !== "file:") {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const textarea = document.createElement("textarea");
+        textarea.value = text;
+        textarea.style.position = "fixed";
+        textarea.style.left = "-9999px";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        textarea.remove();
+      }
+
+      async function deleteAnnotation(index) {
+        const annotation = state.annotations[index];
+        if (!annotation) return;
+        if (annotation.serverId && location.protocol !== "file:") {
+          const response = await fetch(noteApiUrl(), {
+            method: "DELETE",
+            credentials: "same-origin",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ id: annotation.serverId })
+          }).catch(() => null);
+          if (!response?.ok) {
+            const payload = await response?.json().catch(() => ({}));
+            els.draftReadout.textContent = payload?.detail || "Canonical note could not be deleted. Try again.";
+            return;
+          }
+        }
+        state.annotations.splice(index, 1);
+        saveAnnotations();
+        renderAnnotations();
+        renderGoniometryPanel(state.frames[state.frameIndex]);
       }
 
       function setFrame(index, { updateVideo = true, renderSkeleton = true, syncPlayhead = true } = {}) {
@@ -6242,7 +6632,7 @@
         els.video.src = packageVideo.browser_smpl_preview || packageVideo.smpl_preview || VIDEO_URL;
         state.bounds = computeBounds(state.frames);
         state.selectedAnatomy = defaultClinicalSelection();
-        loadAnnotations();
+        await loadAnnotations();
 
         document.getElementById("statusBadge").textContent = "ready";
         document.getElementById("sessionBadge").textContent = `session ${shortSessionId()}`;
@@ -6392,7 +6782,7 @@
         renderAnnotationDraft();
       }
 
-      function saveAnnotation(kind, start, end) {
+      async function saveAnnotation(kind, start, end) {
         const stats = angleStatsForRange(start, end);
         const note = els.annotationNote.value.trim();
         if (!stats && !note) {
@@ -6411,34 +6801,8 @@
           side: metricForSelection()?.side || "",
           workout: currentWorkout(currentTime())?.display_label || currentWorkout(currentTime())?.label || "manual note"
         };
-        const activeMeasurement = activeRomAnalysis();
-        const activeConsistency = activeMeasurement ? repConsistencyForWorkout(activeMeasurement.workout) : null;
-        const activeChartability = activeMeasurement ? chartabilityForRep(activeMeasurement, activeConsistency) : null;
-        const activeSideComparison = activeMeasurement ? sideToSideAnalysis(activeMeasurement) : null;
-        const activeCompensation = activeMeasurement ? compensationAnalysis(activeMeasurement) : null;
-        const activeDrift = activeConsistency ? setDriftAnalysis(activeConsistency) : null;
-        const activeProgression = activeMeasurement ? historicalProgression(activeMeasurement, activeConsistency) : null;
-        const activeDose = activeMeasurement ? workoutDose(activeMeasurement.workout, activeConsistency) : null;
-        state.annotations.push({
-          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-          createdAt: new Date().toISOString(),
-          kind,
-          issueType: state.issueType,
-          note,
-          anatomy: state.selectedAnatomy ? anatomyTitle() : "",
-          chartability: activeChartability?.status || "",
-          chartabilityReasons: activeChartability?.reasons || [],
-          sideRomDelta: activeSideComparison?.romDelta ?? null,
-          associatedMovement: activeCompensation?.largest ? associatedMovementLabel(activeCompensation.largest) : "",
-          setRomDrift: activeDrift?.romDrift ?? null,
-          notableReps: activeDrift?.notableLabels || [],
-          priorRomDelta: activeProgression?.priorDelta ?? null,
-          doseReps: activeDose?.repCount ?? null,
-          doseActiveTime: activeDose?.activeTime ?? null,
-          doseRepDensity: activeDose?.repDensity ?? null,
-          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency, activeSideComparison, activeCompensation, activeDrift, activeProgression, activeDose) : "",
-          ...(stats || fallbackStats)
-        });
+        const annotation = buildAnchoredNote(kind, start, end, note, stats || fallbackStats);
+        state.annotations.push(await persistAnnotation(annotation));
         state.annotations.sort((a, b) => a.startSec - b.startSec);
         saveAnnotations();
         state.annotationDraft = { start: null, end: null };
