@@ -1746,11 +1746,60 @@
 
       .note-snippet {
         border-left: 3px solid var(--amber);
-        padding: 8px 10px;
+        padding: 10px;
         background: rgba(255, 247, 237, 0.68);
         color: var(--muted);
         font-size: 12px;
         line-height: 1.35;
+      }
+
+      .snippet-kicker {
+        color: var(--amber);
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .snippet-title {
+        display: block;
+        margin-top: 2px;
+        color: var(--ink);
+        font-size: 14px;
+        line-height: 1.15;
+      }
+
+      .snippet-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+        margin-top: 9px;
+      }
+
+      .snippet-chip {
+        border: 1px solid rgba(23, 23, 23, 0.14);
+        padding: 7px;
+        background: #ffffff;
+      }
+
+      .snippet-chip strong,
+      .snippet-chip span {
+        display: block;
+      }
+
+      .snippet-chip strong {
+        color: var(--ink);
+        font-size: 12px;
+        line-height: 1.15;
+      }
+
+      .snippet-chip span {
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
       }
 
       .comparison-context {
@@ -2822,30 +2871,6 @@
                   <div class="rom-metric"><strong id="romFrameValue">--</strong><span>playhead time</span></div>
                 </div>
                 <div id="romNote" class="rom-note">Rep-to-rep consistency is reported as ROM standard deviation across detected reps for this movement.</div>
-                <div class="measurement-review">
-                  <div class="measurement-review-head">
-                    <strong>Measurement Review</strong>
-                    <span id="chartabilityChip" class="chartability-chip caution">Review</span>
-                  </div>
-                  <div id="chartabilityReasons" class="reason-list"></div>
-                  <div class="measurement-object">
-                    <div class="measurement-object-top">
-                      <span id="selectionScopeChip" class="scope-chip">selected window</span>
-                      <strong id="selectedObjectTitle">No bounded selection</strong>
-                    </div>
-                    <div class="measurement-window">
-                      <div class="window-track" aria-label="Selected measurement window">
-                        <span id="selectedWindowFill" class="window-fill"></span>
-                        <span id="selectedWindowPlayhead" class="window-playhead"></span>
-                      </div>
-                      <div class="window-meta">
-                        <span id="selectedObjectRange">--</span>
-                        <span id="selectedObjectFrame">--</span>
-                      </div>
-                    </div>
-                    <div id="selectedObjectStats" class="window-stats">Window metrics update after selecting a rep.</div>
-                  </div>
-                </div>
               </div>
               <div id="comparisonContext" class="comparison-context" hidden>
                 <div class="comparison-head">
@@ -2921,6 +2946,30 @@
             </div>
           </div>
           <div class="panel-body measurement-tray-body">
+            <div class="measurement-review">
+              <div class="measurement-review-head">
+                <strong>Measurement Review</strong>
+                <span id="chartabilityChip" class="chartability-chip caution">Review</span>
+              </div>
+              <div id="chartabilityReasons" class="reason-list"></div>
+              <div class="measurement-object">
+                <div class="measurement-object-top">
+                  <span id="selectionScopeChip" class="scope-chip">selected window</span>
+                  <strong id="selectedObjectTitle">No bounded selection</strong>
+                </div>
+                <div class="measurement-window">
+                  <div class="window-track" aria-label="Selected measurement window">
+                    <span id="selectedWindowFill" class="window-fill"></span>
+                    <span id="selectedWindowPlayhead" class="window-playhead"></span>
+                  </div>
+                  <div class="window-meta">
+                    <span id="selectedObjectRange">--</span>
+                    <span id="selectedObjectFrame">--</span>
+                  </div>
+                </div>
+                <div id="selectedObjectStats" class="window-stats">Window metrics update after selecting a rep.</div>
+              </div>
+            </div>
             <div class="measurement-detail-row">
               <canvas id="repOverlay" class="rep-overlay"></canvas>
               <div id="noteSnippet" class="note-snippet">Select a rep to generate chart-ready measurement fields.</div>
@@ -3193,6 +3242,7 @@
         romFrameValue: document.getElementById("romFrameValue"),
         romNote: document.getElementById("romNote"),
         romExitBtn: document.getElementById("romExitBtn"),
+        measurementReview: document.querySelector(".measurement-review"),
         chartabilityChip: document.getElementById("chartabilityChip"),
         chartabilityReasons: document.getElementById("chartabilityReasons"),
         selectionScopeChip: document.getElementById("selectionScopeChip"),
@@ -4991,6 +5041,32 @@
         return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase}${sideDelta}${associated}${setDrift}${priorDelta}${setDose} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
       }
 
+      function snippetChip(label, value) {
+        return `<div class="snippet-chip"><strong>${escapeHtml(value)}</strong><span>${escapeHtml(label)}</span></div>`;
+      }
+
+      function renderMeasurementSummary(analysis, chartability, consistency, dose) {
+        const workout = analysis.workout?.display_label || analysis.workout?.label || "Movement";
+        const rep = analysis.rep;
+        const metric = analysis.metric?.label || "measured angle";
+        const setStart = Number(analysis.workout?.start_sec);
+        const setEnd = Number(analysis.workout?.end_sec);
+        return `
+          <div class="snippet-kicker">Phase-normalized overlay</div>
+          <strong class="snippet-title">${escapeHtml(workout)} | rep ${escapeHtml(rep?.index ?? "?")} | ${escapeHtml(metric)}</strong>
+          <div class="snippet-grid">
+            ${snippetChip("x-axis", "0-100% of selected rep")}
+            ${snippetChip("time slice", `${fmt(rep?.start_sec, 2)}-${fmt(rep?.end_sec, 2)}s`)}
+            ${snippetChip("set window", `${fmt(setStart, 2)}-${fmt(setEnd, 2)}s`)}
+            ${snippetChip("active ROM", Number.isFinite(analysis.rom) ? `${fmt(analysis.rom, 1)} deg` : "--")}
+            ${snippetChip("chartability", chartability?.status || "--")}
+            ${snippetChip("set reps", Number.isFinite(dose?.repCount) ? `${dose.repCount}` : "--")}
+            ${snippetChip("ROM SD", Number.isFinite(consistency?.sdRom) ? `${fmt(consistency.sdRom, 1)} deg` : "--")}
+            ${snippetChip("active time", secondsValue(dose?.activeTime))}
+          </div>
+        `;
+      }
+
       function activeRomAnalysis() {
         if (!state.romMode?.workout || !state.romMode?.rep) return null;
         return repRomAnalysis(state.romMode.workout, state.romMode.rep);
@@ -5991,6 +6067,14 @@
         const span = Math.max(1, max - min);
         const buckets = Array.from({ length: 51 }, () => []);
 
+        ctx.fillStyle = "rgba(23, 23, 23, 0.72)";
+        ctx.font = `${10 * dpr}px sans-serif`;
+        ctx.fillText("Rep progress, phase-normalized", pad, 12 * dpr);
+        if (activeRep) {
+          ctx.fillStyle = "#c2410c";
+          ctx.fillText(`selected ${fmt(activeRep.start_sec, 2)}-${fmt(activeRep.end_sec, 2)}s`, width - pad - 118 * dpr, 12 * dpr);
+        }
+
         ctx.strokeStyle = "rgba(23, 23, 23, 0.1)";
         ctx.lineWidth = dpr;
         for (let i = 1; i < 4; i += 1) {
@@ -6034,8 +6118,8 @@
 
         ctx.fillStyle = "rgba(23, 23, 23, 0.62)";
         ctx.font = `${9 * dpr}px sans-serif`;
-        ctx.fillText("0%", pad, height - 5 * dpr);
-        ctx.fillText("100%", width - pad - 28 * dpr, height - 5 * dpr);
+        ctx.fillText("start 0%", pad, height - 5 * dpr);
+        ctx.fillText("end 100%", width - pad - 42 * dpr, height - 5 * dpr);
       }
 
       function renderComplementaryAngles(frame) {
@@ -6150,7 +6234,7 @@
         els.setDurationValue.textContent = secondsValue(dose?.setDuration);
         els.romVolumeValue.textContent = Number.isFinite(dose?.romVolume) ? `${fmt(dose.romVolume, 0)} deg` : "--";
         els.repDensityValue.textContent = Number.isFinite(dose?.repDensity) ? `${fmt(dose.repDensity, 1)}/min` : "--";
-        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency, sideComparison, compensation, drift, progression, dose);
+        els.noteSnippet.innerHTML = renderMeasurementSummary(analysis, chartability, consistency, dose);
         drawRepOverlay(workout, rep);
       }
 
