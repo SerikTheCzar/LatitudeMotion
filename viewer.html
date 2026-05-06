@@ -2632,6 +2632,12 @@
                     <div class="review-cell"><strong id="baselineDeltaValue">--</strong><span>current - baseline</span></div>
                     <div class="review-cell"><strong id="bestHistoricalValue">--</strong><span>best prior avg</span></div>
                     <div class="review-cell"><strong id="priorDoseValue">--</strong><span>prior reps</span></div>
+                    <div class="review-cell"><strong id="setDoseValue">--</strong><span>set reps</span></div>
+                    <div class="review-cell"><strong id="activeTimeValue">--</strong><span>active time</span></div>
+                    <div class="review-cell"><strong id="gapTimeValue">--</strong><span>gap / rest time</span></div>
+                    <div class="review-cell"><strong id="setDurationValue">--</strong><span>set duration</span></div>
+                    <div class="review-cell"><strong id="romVolumeValue">--</strong><span>ROM volume</span></div>
+                    <div class="review-cell"><strong id="repDensityValue">--</strong><span>rep density</span></div>
                   </div>
                   <canvas id="repOverlay" class="rep-overlay"></canvas>
                   <div id="noteSnippet" class="note-snippet">Select a rep to generate chart-ready measurement fields.</div>
@@ -2920,6 +2926,12 @@
         baselineDeltaValue: document.getElementById("baselineDeltaValue"),
         bestHistoricalValue: document.getElementById("bestHistoricalValue"),
         priorDoseValue: document.getElementById("priorDoseValue"),
+        setDoseValue: document.getElementById("setDoseValue"),
+        activeTimeValue: document.getElementById("activeTimeValue"),
+        gapTimeValue: document.getElementById("gapTimeValue"),
+        setDurationValue: document.getElementById("setDurationValue"),
+        romVolumeValue: document.getElementById("romVolumeValue"),
+        repDensityValue: document.getElementById("repDensityValue"),
         repOverlay: document.getElementById("repOverlay"),
         noteSnippet: document.getElementById("noteSnippet"),
         comparisonContext: document.getElementById("comparisonContext"),
@@ -4458,6 +4470,33 @@
         };
       }
 
+      function workoutDose(workout, consistency) {
+        const analyses = consistency?.analyses || [];
+        const reps = workout?.reps || [];
+        const repCount = analyses.length || reps.length || Number(workout?.rep_count || 0);
+        const startSec = Number(workout?.start_sec);
+        const endSec = Number(workout?.end_sec);
+        const setDuration = Number.isFinite(startSec) && Number.isFinite(endSec) ? Math.max(0, endSec - startSec) : null;
+        const activeTime = analyses.length
+          ? analyses.reduce((sum, analysis) => sum + (Number(analysis.duration) || 0), 0)
+          : reps.reduce((sum, rep) => {
+            const repStart = Number(rep.start_sec);
+            const repEnd = Number(rep.end_sec);
+            return sum + (Number.isFinite(repStart) && Number.isFinite(repEnd) ? Math.max(0, repEnd - repStart) : 0);
+          }, 0);
+        const romVolume = analyses.length
+          ? analyses.reduce((sum, analysis) => sum + (Number(analysis.rom) || 0), 0)
+          : null;
+        return {
+          repCount: Number.isFinite(repCount) ? repCount : null,
+          activeTime,
+          gapTime: Number.isFinite(setDuration) ? Math.max(0, setDuration - activeTime) : null,
+          setDuration,
+          romVolume,
+          repDensity: Number.isFinite(setDuration) && setDuration > 0 ? repCount / (setDuration / 60) : null
+        };
+      }
+
       function chartabilityForRep(analysis, consistency) {
         if (!analysis?.samples?.length) {
           return {
@@ -4560,7 +4599,7 @@
         els.chartabilityReasons.innerHTML = result.reasons.map((reason) => `<span class="reason-chip">${escapeHtml(reason)}</span>`).join("");
       }
 
-      function measurementSnippet(analysis, chartability, consistency, sideComparison = null, compensation = null, drift = null, progression = null) {
+      function measurementSnippet(analysis, chartability, consistency, sideComparison = null, compensation = null, drift = null, progression = null, dose = null) {
         const workout = analysis.workout?.display_label || analysis.workout?.label || "movement";
         const rep = analysis.rep?.index ?? "?";
         const metric = analysis.metric?.label || "measured angle";
@@ -4575,7 +4614,8 @@
         const associated = compensation?.largest ? ` | associated ${associatedMovementLabel(compensation.largest)}` : "";
         const setDrift = drift && Number.isFinite(drift.romDrift) ? ` | set ROM drift ${signedDegrees(drift.romDrift)}` : "";
         const priorDelta = progression && Number.isFinite(progression.priorDelta) ? ` | prior delta ${signedDegrees(progression.priorDelta)}` : "";
-        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase}${sideDelta}${associated}${setDrift}${priorDelta} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
+        const setDose = dose && Number.isFinite(dose.repCount) ? ` | dose ${dose.repCount} reps / ${secondsValue(dose.activeTime)} active` : "";
+        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase}${sideDelta}${associated}${setDrift}${priorDelta}${setDose} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
       }
 
       function activeRomAnalysis() {
@@ -5644,6 +5684,7 @@
         const compensation = compensationAnalysis(analysis);
         const drift = setDriftAnalysis(consistency);
         const progression = historicalProgression(analysis, consistency);
+        const dose = workoutDose(workout, consistency);
         const workoutLabel = workout.display_label || workout.label || "Movement";
         const flexionDescriptor = metric.joint === "elbow" ? "smallest internal angle" : "largest measured elevation";
         els.romFlexionLabel.textContent = metric.joint === "elbow" ? "max flexion" : "peak elevation";
@@ -5720,7 +5761,13 @@
           ? `${fmt(progression.best.rom, 1)} deg ${shortComparisonSession(progression.best.session)}`
           : "--";
         els.priorDoseValue.textContent = Number.isFinite(progression?.prior?.repCount) ? `${progression.prior.repCount} reps` : "--";
-        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency, sideComparison, compensation, drift, progression);
+        els.setDoseValue.textContent = Number.isFinite(dose?.repCount) ? `${dose.repCount} reps` : "--";
+        els.activeTimeValue.textContent = secondsValue(dose?.activeTime);
+        els.gapTimeValue.textContent = secondsValue(dose?.gapTime);
+        els.setDurationValue.textContent = secondsValue(dose?.setDuration);
+        els.romVolumeValue.textContent = Number.isFinite(dose?.romVolume) ? `${fmt(dose.romVolume, 0)} deg` : "--";
+        els.repDensityValue.textContent = Number.isFinite(dose?.repDensity) ? `${fmt(dose.repDensity, 1)}/min` : "--";
+        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency, sideComparison, compensation, drift, progression, dose);
         drawRepOverlay(workout, rep);
       }
 
@@ -6371,6 +6418,7 @@
         const activeCompensation = activeMeasurement ? compensationAnalysis(activeMeasurement) : null;
         const activeDrift = activeConsistency ? setDriftAnalysis(activeConsistency) : null;
         const activeProgression = activeMeasurement ? historicalProgression(activeMeasurement, activeConsistency) : null;
+        const activeDose = activeMeasurement ? workoutDose(activeMeasurement.workout, activeConsistency) : null;
         state.annotations.push({
           id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
           createdAt: new Date().toISOString(),
@@ -6385,7 +6433,10 @@
           setRomDrift: activeDrift?.romDrift ?? null,
           notableReps: activeDrift?.notableLabels || [],
           priorRomDelta: activeProgression?.priorDelta ?? null,
-          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency, activeSideComparison, activeCompensation, activeDrift, activeProgression) : "",
+          doseReps: activeDose?.repCount ?? null,
+          doseActiveTime: activeDose?.activeTime ?? null,
+          doseRepDensity: activeDose?.repDensity ?? null,
+          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency, activeSideComparison, activeCompensation, activeDrift, activeProgression, activeDose) : "",
           ...(stats || fallbackStats)
         });
         state.annotations.sort((a, b) => a.startSec - b.startSec);
