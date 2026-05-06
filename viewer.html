@@ -1628,30 +1628,29 @@
       }
 
       .review-grid {
-        display: flex;
-        gap: 10px;
-        overflow-x: auto;
-        overscroll-behavior-x: contain;
-        padding-bottom: 4px;
-        scroll-snap-type: x proximity;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+        gap: 8px;
+        overflow: visible;
       }
 
       .metric-cluster {
-        flex: 0 0 328px;
+        min-width: 0;
         border: 1px solid rgba(23, 23, 23, 0.12);
         background: rgba(255, 255, 255, 0.64);
-        scroll-snap-align: start;
+        align-self: start;
       }
 
-      .metric-cluster:not([open]) {
-        flex-basis: 220px;
+      .metric-cluster[open] {
+        grid-column: span 2;
       }
 
       .metric-cluster summary {
         display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
         gap: 3px;
-        min-height: 58px;
-        padding: 10px;
+        min-height: 50px;
+        padding: 9px;
         cursor: pointer;
         list-style: none;
         border-bottom: 1px solid rgba(23, 23, 23, 0.1);
@@ -1663,7 +1662,8 @@
 
       .metric-cluster summary strong {
         color: var(--ink);
-        font-size: 13px;
+        font-size: 12px;
+        line-height: 1.15;
       }
 
       .metric-cluster summary span {
@@ -1676,8 +1676,10 @@
 
       .metric-cluster summary::after {
         content: "+";
+        grid-row: 1 / span 2;
+        grid-column: 2;
+        align-self: center;
         justify-self: end;
-        margin-top: -35px;
         color: var(--amber);
         font-weight: 950;
       }
@@ -1689,7 +1691,7 @@
       .cluster-cells {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 7px;
+        gap: 6px;
         padding: 8px;
       }
 
@@ -3261,6 +3263,18 @@
         frameStepReadout: document.getElementById("frameStepReadout")
       };
       document.querySelector(".stage-card")?.appendChild(els.measurementTray);
+      const metricClusters = [...document.querySelectorAll(".metric-cluster")];
+      let openedMetricCluster = metricClusters.find((cluster) => cluster.open);
+      metricClusters.forEach((cluster) => {
+        if (cluster.open && cluster !== openedMetricCluster) cluster.open = false;
+        cluster.addEventListener("toggle", () => {
+          if (!cluster.open) return;
+          openedMetricCluster = cluster;
+          metricClusters.forEach((candidate) => {
+            if (candidate !== cluster) candidate.open = false;
+          });
+        });
+      });
 
       const vec = (point) => [Number(point[0]), Number(point[1]), Number(point[2])];
       const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
