@@ -2614,6 +2614,11 @@
                     <div class="review-cell"><strong id="sideRomDeltaValue">--</strong><span>side ROM delta</span></div>
                     <div class="review-cell"><strong id="sideSpeedDeltaValue">--</strong><span>side speed delta</span></div>
                     <div class="review-cell"><strong id="sideTimingDeltaValue">--</strong><span>side endpoint delta</span></div>
+                    <div class="review-cell"><strong id="trunkLeanValue">--</strong><span>trunk lean range</span></div>
+                    <div class="review-cell"><strong id="shoulderHikeValue">--</strong><span>shoulder elevation delta</span></div>
+                    <div class="review-cell"><strong id="torsoRotationValue">--</strong><span>torso rotation range</span></div>
+                    <div class="review-cell"><strong id="pelvisShiftValue">--</strong><span>pelvis lateral shift</span></div>
+                    <div class="review-cell"><strong id="associatedMovementValue">--</strong><span>largest associated movement</span></div>
                   </div>
                   <canvas id="repOverlay" class="rep-overlay"></canvas>
                   <div id="noteSnippet" class="note-snippet">Select a rep to generate chart-ready measurement fields.</div>
@@ -2884,6 +2889,11 @@
         sideRomDeltaValue: document.getElementById("sideRomDeltaValue"),
         sideSpeedDeltaValue: document.getElementById("sideSpeedDeltaValue"),
         sideTimingDeltaValue: document.getElementById("sideTimingDeltaValue"),
+        trunkLeanValue: document.getElementById("trunkLeanValue"),
+        shoulderHikeValue: document.getElementById("shoulderHikeValue"),
+        torsoRotationValue: document.getElementById("torsoRotationValue"),
+        pelvisShiftValue: document.getElementById("pelvisShiftValue"),
+        associatedMovementValue: document.getElementById("associatedMovementValue"),
         repOverlay: document.getElementById("repOverlay"),
         noteSnippet: document.getElementById("noteSnippet"),
         comparisonContext: document.getElementById("comparisonContext"),
@@ -4161,6 +4171,88 @@
         };
       }
 
+      function worldPoint(frame, index) {
+        return frame?.joints?.[index] ? toWorld(frame.joints[index]) : null;
+      }
+
+      function angleBetweenVectors(a, b) {
+        if (!a || !b || a.lengthSq() < 1e-8 || b.lengthSq() < 1e-8) return null;
+        return THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(a.clone().normalize().dot(b.clone().normalize()), -1, 1)));
+      }
+
+      function signedHorizontalAngle(a, b) {
+        if (!a || !b) return null;
+        const va = new THREE.Vector2(a.x, a.z);
+        const vb = new THREE.Vector2(b.x, b.z);
+        if (va.lengthSq() < 1e-8 || vb.lengthSq() < 1e-8) return null;
+        return THREE.MathUtils.radToDeg(Math.atan2((va.x * vb.y) - (va.y * vb.x), va.dot(vb)));
+      }
+
+      function rangeValue(values) {
+        const clean = nums(values);
+        return clean.length ? Math.max(...clean) - Math.min(...clean) : null;
+      }
+
+      function maxAbsValue(values) {
+        const clean = nums(values);
+        return clean.length ? clean.reduce((best, value) => Math.abs(value) > Math.abs(best) ? value : best, clean[0]) : null;
+      }
+
+      function compensationAnalysis(analysis) {
+        if (!analysis?.rep) return null;
+        const side = analysis.metric?.side === "left" ? "left" : "right";
+        const shoulderIndex = side === "left" ? 5 : 6;
+        const oppositeShoulderIndex = side === "left" ? 6 : 5;
+        const samples = state.frames
+          .filter((frame) => frame.t >= analysis.rep.start_sec && frame.t <= analysis.rep.end_sec)
+          .map((frame) => {
+            const leftShoulder = worldPoint(frame, 5);
+            const rightShoulder = worldPoint(frame, 6);
+            const leftHip = worldPoint(frame, 11);
+            const rightHip = worldPoint(frame, 12);
+            const shoulder = worldPoint(frame, shoulderIndex);
+            const oppositeShoulder = worldPoint(frame, oppositeShoulderIndex);
+            if (!leftShoulder || !rightShoulder || !leftHip || !rightHip || !shoulder || !oppositeShoulder) return null;
+            const shoulderMid = leftShoulder.clone().add(rightShoulder).multiplyScalar(0.5);
+            const hipMid = leftHip.clone().add(rightHip).multiplyScalar(0.5);
+            const torso = shoulderMid.clone().sub(hipMid);
+            const trunkLean = angleBetweenVectors(torso, new THREE.Vector3(0, 1, 0));
+            const shoulderLine = rightShoulder.clone().sub(leftShoulder);
+            const hipLine = rightHip.clone().sub(leftHip);
+            const torsoRotation = signedHorizontalAngle(shoulderLine, hipLine);
+            return {
+              t: frame.t,
+              trunkLean,
+              shoulderElevationDelta: shoulder.y - oppositeShoulder.y,
+              torsoRotation,
+              pelvisX: hipMid.x
+            };
+          })
+          .filter(Boolean);
+        if (!samples.length) return null;
+        const pelvisStart = samples[0].pelvisX;
+        const pelvisOffsets = samples.map((sample) => sample.pelvisX - pelvisStart);
+        const trunkLeanRange = rangeValue(samples.map((sample) => sample.trunkLean));
+        const shoulderElevationChange = rangeValue(samples.map((sample) => sample.shoulderElevationDelta));
+        const torsoRotationRange = rangeValue(samples.map((sample) => sample.torsoRotation));
+        const pelvisShift = Math.abs(maxAbsValue(pelvisOffsets) ?? 0);
+        const candidates = [
+          { key: "trunk", label: "trunk lean", value: trunkLeanRange, unit: "deg", magnitude: Math.abs(trunkLeanRange ?? 0) },
+          { key: "shoulder", label: "shoulder elevation", value: shoulderElevationChange, unit: "cm", magnitude: Math.abs((shoulderElevationChange ?? 0) * 100) },
+          { key: "rotation", label: "torso rotation", value: torsoRotationRange, unit: "deg", magnitude: Math.abs(torsoRotationRange ?? 0) },
+          { key: "pelvis", label: "pelvis shift", value: pelvisShift, unit: "cm", magnitude: Math.abs((pelvisShift ?? 0) * 100) }
+        ].filter((candidate) => Number.isFinite(candidate.magnitude));
+        const largest = candidates.sort((a, b) => b.magnitude - a.magnitude)[0] || null;
+        return {
+          samples,
+          trunkLeanRange,
+          shoulderElevationChange,
+          torsoRotationRange,
+          pelvisShift,
+          largest
+        };
+      }
+
       function angleStatsForRange(startSec, endSec) {
         const lo = Math.min(startSec, endSec);
         const hi = Math.max(startSec, endSec);
@@ -4352,13 +4444,23 @@
         return `${numeric > 0 ? "+" : ""}${fmt(numeric, 2)}s`;
       }
 
+      function cmValue(value) {
+        return Number.isFinite(Number(value)) ? `${fmt(Number(value) * 100, 1)} cm` : "--";
+      }
+
+      function associatedMovementLabel(candidate) {
+        if (!candidate) return "--";
+        const value = candidate.unit === "cm" ? `${fmt(candidate.magnitude, 1)} cm` : `${fmt(candidate.magnitude, 1)} deg`;
+        return `${candidate.label} ${value}`;
+      }
+
       function setChartabilityChip(result) {
         els.chartabilityChip.textContent = result.status;
         els.chartabilityChip.className = `chartability-chip ${result.className}`;
         els.chartabilityReasons.innerHTML = result.reasons.map((reason) => `<span class="reason-chip">${escapeHtml(reason)}</span>`).join("");
       }
 
-      function measurementSnippet(analysis, chartability, consistency, sideComparison = null) {
+      function measurementSnippet(analysis, chartability, consistency, sideComparison = null, compensation = null) {
         const workout = analysis.workout?.display_label || analysis.workout?.label || "movement";
         const rep = analysis.rep?.index ?? "?";
         const metric = analysis.metric?.label || "measured angle";
@@ -4370,7 +4472,8 @@
           ? ` | phases ${secondsValue(analysis.phases.toEndpoint)} / ${secondsValue(analysis.phases.returnPhase)}`
           : "";
         const sideDelta = sideComparison ? ` | side ROM delta ${signedDegrees(sideComparison.romDelta)}` : "";
-        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase}${sideDelta} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
+        const associated = compensation?.largest ? ` | associated ${associatedMovementLabel(compensation.largest)}` : "";
+        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase}${sideDelta}${associated} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
       }
 
       function activeRomAnalysis() {
@@ -5436,6 +5539,7 @@
         const consistency = repConsistencyForWorkout(workout);
         const chartability = chartabilityForRep(analysis, consistency);
         const sideComparison = sideToSideAnalysis(analysis);
+        const compensation = compensationAnalysis(analysis);
         const workoutLabel = workout.display_label || workout.label || "Movement";
         const flexionDescriptor = metric.joint === "elbow" ? "smallest internal angle" : "largest measured elevation";
         els.romFlexionLabel.textContent = metric.joint === "elbow" ? "max flexion" : "peak elevation";
@@ -5486,7 +5590,12 @@
         els.sideRomDeltaValue.textContent = signedDegrees(sideComparison?.romDelta);
         els.sideSpeedDeltaValue.textContent = signedSpeed(sideComparison?.speedDelta);
         els.sideTimingDeltaValue.textContent = signedSeconds(sideComparison?.endpointTimingDelta);
-        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency, sideComparison);
+        els.trunkLeanValue.textContent = signedDegrees(compensation?.trunkLeanRange);
+        els.shoulderHikeValue.textContent = cmValue(compensation?.shoulderElevationChange);
+        els.torsoRotationValue.textContent = signedDegrees(compensation?.torsoRotationRange);
+        els.pelvisShiftValue.textContent = cmValue(compensation?.pelvisShift);
+        els.associatedMovementValue.textContent = associatedMovementLabel(compensation?.largest);
+        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency, sideComparison, compensation);
         drawRepOverlay(workout, rep);
       }
 
@@ -6134,6 +6243,7 @@
         const activeConsistency = activeMeasurement ? repConsistencyForWorkout(activeMeasurement.workout) : null;
         const activeChartability = activeMeasurement ? chartabilityForRep(activeMeasurement, activeConsistency) : null;
         const activeSideComparison = activeMeasurement ? sideToSideAnalysis(activeMeasurement) : null;
+        const activeCompensation = activeMeasurement ? compensationAnalysis(activeMeasurement) : null;
         state.annotations.push({
           id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
           createdAt: new Date().toISOString(),
@@ -6144,7 +6254,8 @@
           chartability: activeChartability?.status || "",
           chartabilityReasons: activeChartability?.reasons || [],
           sideRomDelta: activeSideComparison?.romDelta ?? null,
-          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency, activeSideComparison) : "",
+          associatedMovement: activeCompensation?.largest ? associatedMovementLabel(activeCompensation.largest) : "",
+          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency, activeSideComparison, activeCompensation) : "",
           ...(stats || fallbackStats)
         });
         state.annotations.sort((a, b) => a.startSec - b.startSec);
