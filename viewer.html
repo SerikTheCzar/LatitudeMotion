@@ -2619,6 +2619,13 @@
                     <div class="review-cell"><strong id="torsoRotationValue">--</strong><span>torso rotation range</span></div>
                     <div class="review-cell"><strong id="pelvisShiftValue">--</strong><span>pelvis lateral shift</span></div>
                     <div class="review-cell"><strong id="associatedMovementValue">--</strong><span>largest associated movement</span></div>
+                    <div class="review-cell"><strong id="romDriftValue">--</strong><span>set ROM drift</span></div>
+                    <div class="review-cell"><strong id="tempoDriftValue">--</strong><span>set time drift</span></div>
+                    <div class="review-cell"><strong id="speedDriftValue">--</strong><span>set speed drift</span></div>
+                    <div class="review-cell"><strong id="endpointDriftValue">--</strong><span>endpoint timing drift</span></div>
+                    <div class="review-cell"><strong id="lowestConfidenceRepValue">--</strong><span>lowest-confidence rep</span></div>
+                    <div class="review-cell"><strong id="mostDifferentRepValue">--</strong><span>most different ROM rep</span></div>
+                    <div class="review-cell"><strong id="notableRepsValue">--</strong><span>notable reps</span></div>
                   </div>
                   <canvas id="repOverlay" class="rep-overlay"></canvas>
                   <div id="noteSnippet" class="note-snippet">Select a rep to generate chart-ready measurement fields.</div>
@@ -2894,6 +2901,13 @@
         torsoRotationValue: document.getElementById("torsoRotationValue"),
         pelvisShiftValue: document.getElementById("pelvisShiftValue"),
         associatedMovementValue: document.getElementById("associatedMovementValue"),
+        romDriftValue: document.getElementById("romDriftValue"),
+        tempoDriftValue: document.getElementById("tempoDriftValue"),
+        speedDriftValue: document.getElementById("speedDriftValue"),
+        endpointDriftValue: document.getElementById("endpointDriftValue"),
+        lowestConfidenceRepValue: document.getElementById("lowestConfidenceRepValue"),
+        mostDifferentRepValue: document.getElementById("mostDifferentRepValue"),
+        notableRepsValue: document.getElementById("notableRepsValue"),
         repOverlay: document.getElementById("repOverlay"),
         noteSnippet: document.getElementById("noteSnippet"),
         comparisonContext: document.getElementById("comparisonContext"),
@@ -4363,6 +4377,38 @@
         };
       }
 
+      function setDriftAnalysis(consistency) {
+        const analyses = [...(consistency?.analyses || [])].filter((analysis) => analysis?.samples?.length).sort((a, b) => (a.rep?.index ?? 0) - (b.rep?.index ?? 0));
+        if (!analyses.length) return null;
+        const first = analyses[0];
+        const last = analyses[analyses.length - 1];
+        const lowestConfidence = analyses.reduce((lowest, analysis) => (
+          Number(analysis.meanConfidence ?? 1) < Number(lowest.meanConfidence ?? 1) ? analysis : lowest
+        ), analyses[0]);
+        const mostDifferentRom = Number.isFinite(consistency?.meanRom)
+          ? analyses.reduce((most, analysis) => (
+            Math.abs(analysis.rom - consistency.meanRom) > Math.abs(most.rom - consistency.meanRom) ? analysis : most
+          ), analyses[0])
+          : null;
+        return {
+          first,
+          last,
+          romDrift: analyses.length > 1 ? last.rom - first.rom : null,
+          durationDrift: analyses.length > 1 ? last.duration - first.duration : null,
+          speedDrift: Number.isFinite(last.medianSpeed) && Number.isFinite(first.medianSpeed) ? last.medianSpeed - first.medianSpeed : null,
+          endpointTimingDrift: Number.isFinite(last.phases?.toEndpoint) && Number.isFinite(first.phases?.toEndpoint) ? last.phases.toEndpoint - first.phases.toEndpoint : null,
+          lowestConfidence,
+          mostDifferentRom,
+          notableLabels: [
+            consistency.bestRep ? `max ROM r${consistency.bestRep.rep.index}` : "",
+            consistency.worstRep ? `min ROM r${consistency.worstRep.rep.index}` : "",
+            consistency.slowestRep ? `slow r${consistency.slowestRep.rep.index}` : "",
+            lowestConfidence ? `low conf r${lowestConfidence.rep.index}` : "",
+            mostDifferentRom ? `outlier r${mostDifferentRom.rep.index}` : ""
+          ].filter(Boolean)
+        };
+      }
+
       function chartabilityForRep(analysis, consistency) {
         if (!analysis?.samples?.length) {
           return {
@@ -4422,6 +4468,11 @@
         return Number.isFinite(Number(value)) ? `${fmt(Number(value) * 100, 0)}%` : "--";
       }
 
+      function repLabel(analysis, suffix = "") {
+        if (!analysis?.rep) return "--";
+        return `rep ${analysis.rep.index}${suffix}`;
+      }
+
       function secondsValue(value) {
         return Number.isFinite(Number(value)) ? `${fmt(Number(value), 2)}s` : "--";
       }
@@ -4460,7 +4511,7 @@
         els.chartabilityReasons.innerHTML = result.reasons.map((reason) => `<span class="reason-chip">${escapeHtml(reason)}</span>`).join("");
       }
 
-      function measurementSnippet(analysis, chartability, consistency, sideComparison = null, compensation = null) {
+      function measurementSnippet(analysis, chartability, consistency, sideComparison = null, compensation = null, drift = null) {
         const workout = analysis.workout?.display_label || analysis.workout?.label || "movement";
         const rep = analysis.rep?.index ?? "?";
         const metric = analysis.metric?.label || "measured angle";
@@ -4473,7 +4524,8 @@
           : "";
         const sideDelta = sideComparison ? ` | side ROM delta ${signedDegrees(sideComparison.romDelta)}` : "";
         const associated = compensation?.largest ? ` | associated ${associatedMovementLabel(compensation.largest)}` : "";
-        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase}${sideDelta}${associated} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
+        const setDrift = drift && Number.isFinite(drift.romDrift) ? ` | set ROM drift ${signedDegrees(drift.romDrift)}` : "";
+        return `${metric} | ${workout} rep ${rep} | range ${range} | active arc ${rom}${phase}${sideDelta}${associated}${setDrift} | chartability ${chartability.status} | reps ${repCount} | ROM SD ${sd}`;
       }
 
       function activeRomAnalysis() {
@@ -5540,6 +5592,7 @@
         const chartability = chartabilityForRep(analysis, consistency);
         const sideComparison = sideToSideAnalysis(analysis);
         const compensation = compensationAnalysis(analysis);
+        const drift = setDriftAnalysis(consistency);
         const workoutLabel = workout.display_label || workout.label || "Movement";
         const flexionDescriptor = metric.joint === "elbow" ? "smallest internal angle" : "largest measured elevation";
         els.romFlexionLabel.textContent = metric.joint === "elbow" ? "max flexion" : "peak elevation";
@@ -5595,7 +5648,18 @@
         els.torsoRotationValue.textContent = signedDegrees(compensation?.torsoRotationRange);
         els.pelvisShiftValue.textContent = cmValue(compensation?.pelvisShift);
         els.associatedMovementValue.textContent = associatedMovementLabel(compensation?.largest);
-        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency, sideComparison, compensation);
+        els.romDriftValue.textContent = signedDegrees(drift?.romDrift);
+        els.tempoDriftValue.textContent = signedSeconds(drift?.durationDrift);
+        els.speedDriftValue.textContent = signedSpeed(drift?.speedDrift);
+        els.endpointDriftValue.textContent = signedSeconds(drift?.endpointTimingDrift);
+        els.lowestConfidenceRepValue.textContent = drift?.lowestConfidence
+          ? repLabel(drift.lowestConfidence, ` ${chartPercent(drift.lowestConfidence.meanConfidence)}`)
+          : "--";
+        els.mostDifferentRepValue.textContent = drift?.mostDifferentRom && Number.isFinite(consistency.meanRom)
+          ? repLabel(drift.mostDifferentRom, ` ${signedDegrees(drift.mostDifferentRom.rom - consistency.meanRom)}`)
+          : "--";
+        els.notableRepsValue.textContent = drift?.notableLabels?.length ? drift.notableLabels.join(" / ") : "--";
+        els.noteSnippet.textContent = measurementSnippet(analysis, chartability, consistency, sideComparison, compensation, drift);
         drawRepOverlay(workout, rep);
       }
 
@@ -6244,6 +6308,7 @@
         const activeChartability = activeMeasurement ? chartabilityForRep(activeMeasurement, activeConsistency) : null;
         const activeSideComparison = activeMeasurement ? sideToSideAnalysis(activeMeasurement) : null;
         const activeCompensation = activeMeasurement ? compensationAnalysis(activeMeasurement) : null;
+        const activeDrift = activeConsistency ? setDriftAnalysis(activeConsistency) : null;
         state.annotations.push({
           id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
           createdAt: new Date().toISOString(),
@@ -6255,7 +6320,9 @@
           chartabilityReasons: activeChartability?.reasons || [],
           sideRomDelta: activeSideComparison?.romDelta ?? null,
           associatedMovement: activeCompensation?.largest ? associatedMovementLabel(activeCompensation.largest) : "",
-          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency, activeSideComparison, activeCompensation) : "",
+          setRomDrift: activeDrift?.romDrift ?? null,
+          notableReps: activeDrift?.notableLabels || [],
+          measurementSnippet: activeMeasurement && activeChartability ? measurementSnippet(activeMeasurement, activeChartability, activeConsistency, activeSideComparison, activeCompensation, activeDrift) : "",
           ...(stats || fallbackStats)
         });
         state.annotations.sort((a, b) => a.startSec - b.startSec);
