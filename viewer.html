@@ -1240,6 +1240,7 @@
         opacity: 0.7;
         top: 5px;
         height: calc(100% - 10px);
+        cursor: pointer;
       }
 
       .rep {
@@ -1456,6 +1457,88 @@
         line-height: 1.35;
       }
 
+      .comparison-context {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border: 1px solid rgba(194, 65, 12, 0.28);
+        border-left: 5px solid var(--amber);
+        background: rgba(255, 247, 237, 0.82);
+      }
+
+      .comparison-context[hidden] {
+        display: none;
+      }
+
+      .comparison-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: start;
+      }
+
+      .comparison-kicker {
+        margin: 0 0 4px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 950;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+      }
+
+      .comparison-context h3 {
+        margin: 0;
+        color: var(--ink);
+        font-size: 18px;
+      }
+
+      .comparison-context p {
+        margin: 4px 0 0;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.35;
+      }
+
+      .comparison-findings {
+        display: grid;
+        gap: 7px;
+      }
+
+      .comparison-finding {
+        border: 1px solid rgba(23, 23, 23, 0.12);
+        background: rgba(255, 255, 255, 0.72);
+        padding: 9px 10px;
+      }
+
+      .comparison-finding strong {
+        display: block;
+        color: var(--ink);
+        font-size: 12px;
+      }
+
+      .comparison-finding span {
+        display: block;
+        margin-top: 3px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.35;
+      }
+
+      .comparison-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .comparison-actions span {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
       .angle-history {
         width: 100%;
         height: 112px;
@@ -1570,6 +1653,12 @@
         border-radius: 20px;
         padding: 13px;
         background: rgba(255, 255, 255, 0.055);
+      }
+
+      .workout.is-selected,
+      .segment.is-selected {
+        border-color: var(--amber) !important;
+        border-left: 5px solid var(--amber) !important;
       }
 
       .workout-top {
@@ -2278,6 +2367,24 @@
                 </div>
                 <div id="romNote" class="rom-note">Rep-to-rep consistency is reported as ROM standard deviation across detected reps for this movement.</div>
               </div>
+              <div id="comparisonContext" class="comparison-context" hidden>
+                <div class="comparison-head">
+                  <div>
+                    <div id="comparisonKicker" class="comparison-kicker">Motion comparison</div>
+                    <h3 id="comparisonTitle">Select a workout</h3>
+                    <p id="comparisonSummary">Comparable movement primitives appear here when available.</p>
+                  </div>
+                  <button id="comparisonCloseBtn" class="button ghost" type="button">Close</button>
+                </div>
+                <div id="comparisonFindings" class="comparison-findings"></div>
+                <p id="comparisonDraft"></p>
+                <div class="comparison-actions">
+                  <span>Was this useful?</span>
+                  <button class="button ghost" type="button" data-comparison-rating="useful">Useful</button>
+                  <button class="button ghost" type="button" data-comparison-rating="not-useful">Not useful</button>
+                  <button class="button ghost" type="button" data-comparison-rating="wrong">Wrong</button>
+                </div>
+              </div>
               <canvas id="angleHistory" class="angle-history"></canvas>
               <div>
                 <h3>Complementary joints</h3>
@@ -2447,6 +2554,9 @@
         annotations: [],
         annotationDraft: { start: null, end: null },
         romMode: null,
+        comparisons: [],
+        selectedComparison: null,
+        selectedWorkoutKey: "",
         issueType: "ROM note",
         timelineDragging: false,
         reverse: false
@@ -2498,6 +2608,13 @@
         romFrameValue: document.getElementById("romFrameValue"),
         romNote: document.getElementById("romNote"),
         romExitBtn: document.getElementById("romExitBtn"),
+        comparisonContext: document.getElementById("comparisonContext"),
+        comparisonKicker: document.getElementById("comparisonKicker"),
+        comparisonTitle: document.getElementById("comparisonTitle"),
+        comparisonSummary: document.getElementById("comparisonSummary"),
+        comparisonFindings: document.getElementById("comparisonFindings"),
+        comparisonDraft: document.getElementById("comparisonDraft"),
+        comparisonCloseBtn: document.getElementById("comparisonCloseBtn"),
         selectionCard: document.getElementById("selectionCard"),
         selectionTitle: document.getElementById("selectionTitle"),
         selectionMeta: document.getElementById("selectionMeta"),
@@ -2543,6 +2660,9 @@
       const midpoint = (a, b) => scaleVec(add(a, b), 0.5);
       const finitePoint = (point) => Array.isArray(point) && point.length >= 3 && point.every((value) => Number.isFinite(Number(value)));
       const fmt = (value, digits = 2) => value !== null && value !== "" && Number.isFinite(Number(value)) ? Number(value).toFixed(digits) : "--";
+      const movementKey = (value = "") => String(value).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+      const workoutKey = (workout = {}) => movementKey(workout.label || workout.display_label || "");
+      const escapeHtml = (value = "") => String(value).replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
 
       THREE.ColorManagement.enabled = true;
 
@@ -3136,6 +3256,85 @@
             review_package: REVIEW_PACKAGE_URL
           }
         };
+      }
+
+      async function loadComparisons() {
+        try {
+          const response = await fetch(`/api/juno/sessions/${encodeURIComponent(SESSION_RECORD_ID)}/comparisons`, { cache: "no-store" });
+          const payload = await response.json().catch(() => ({}));
+          state.comparisons = response.ok && Array.isArray(payload.comparisons) ? payload.comparisons : [];
+        } catch {
+          state.comparisons = [];
+        }
+      }
+
+      function comparisonForWorkout(workout) {
+        const key = workoutKey(workout);
+        return state.comparisons.find((comparison) => comparison.workout_key === key) || null;
+      }
+
+      function findingPrefix(kind) {
+        if (kind === "improved") return "Improved";
+        if (kind === "watch") return "Watch";
+        return "Stable";
+      }
+
+      function renderComparisonContext(comparison, workout) {
+        state.selectedComparison = comparison || null;
+        state.selectedWorkoutKey = workoutKey(workout);
+        if (!comparison) {
+          els.comparisonContext.hidden = false;
+          els.comparisonKicker.textContent = workout?.display_label || workout?.label || "Motion comparison";
+          els.comparisonTitle.textContent = "No close match yet";
+          els.comparisonSummary.textContent = "This workout is selectable, but no comparable primitive was found in the assigned sessions.";
+          els.comparisonFindings.innerHTML = "";
+          els.comparisonDraft.textContent = "";
+          renderTimeline();
+          renderWorkouts();
+          return;
+        }
+        els.comparisonContext.hidden = false;
+        const reference = comparison.reference_session || {};
+        els.comparisonKicker.textContent = `Compared with ${reference.client_label || "matched session"}`;
+        els.comparisonTitle.textContent = comparison.workout_label || "Motion comparison";
+        els.comparisonSummary.textContent = `${comparison.headline || "Closest matching movement found."} Confidence: ${comparison.confidence?.level || "moderate"}.`;
+        els.comparisonFindings.innerHTML = (comparison.findings || []).map((item) => `
+          <div class="comparison-finding">
+            <strong>${escapeHtml(findingPrefix(item.kind))}: ${escapeHtml(item.label || "Finding")}</strong>
+            <span>${escapeHtml(item.message || "")}</span>
+          </div>
+        `).join("") || "<div class='comparison-finding'><strong>Comparable primitive found</strong><span>No material change crossed the first-pass thresholds.</span></div>";
+        els.comparisonDraft.textContent = comparison.documentation_draft || "";
+        renderTimeline();
+        renderWorkouts();
+      }
+
+      function selectWorkoutComparison(workout) {
+        stopPlayback();
+        state.romMode = null;
+        const midpoint = Number.isFinite(workout?.start_sec) && Number.isFinite(workout?.end_sec) ? (workout.start_sec + workout.end_sec) * 0.5 : currentTime();
+        renderComparisonContext(comparisonForWorkout(workout), workout);
+        seekToTime(midpoint, { updateVideo: true });
+      }
+
+      async function submitComparisonFeedback(rating) {
+        const comparison = state.selectedComparison;
+        if (!comparison) return;
+        const response = await fetch(`/api/juno/sessions/${encodeURIComponent(SESSION_RECORD_ID)}/comparison-feedback`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            comparison_id: comparison.id,
+            rating,
+            workout_label: comparison.workout_label,
+            reference_session_id: comparison.reference_session?.id || "",
+          }),
+        });
+        if (!response.ok) {
+          els.comparisonSummary.textContent = "Feedback could not be saved. Please try again.";
+          return;
+        }
+        els.comparisonSummary.textContent = `Feedback saved: ${rating}. ${comparison.confidence?.reason || ""}`.trim();
       }
 
       function computeUprightFrame(frames) {
@@ -4658,6 +4857,7 @@
         const center = SIDE_JOINTS[analysis.metric.side]?.[analysis.metric.joint]?.center;
         if (Number.isInteger(center)) state.selectedAnatomy = { type: "joint", index: center };
         const targetTime = analysis.flexionSample?.t ?? ((rep.start_sec + rep.end_sec) * 0.5);
+        renderComparisonContext(comparisonForWorkout(workout), workout);
         renderTimeline();
         renderAnnotationMarkers();
         setFrame(frameIndexForTime(targetTime), { updateVideo: true });
@@ -4678,12 +4878,19 @@
         els.timeline.classList.toggle("rom-mode", Boolean(state.romMode?.rep));
         (state.analysis?.workouts || []).forEach((workout, index) => {
           if (workout.end_sec < visible.startSec || workout.start_sec > visible.endSec) return;
-          const segment = document.createElement("div");
+          const segment = document.createElement("button");
           segment.className = "segment";
+          if (state.selectedWorkoutKey === workoutKey(workout)) segment.classList.add("is-selected");
+          segment.type = "button";
           segment.title = `${workout.display_label || workout.label}: ${fmt(workout.start_sec, 1)}-${fmt(workout.end_sec, 1)}s`;
           segment.style.left = `${timeToTimelinePct(workout.start_sec)}%`;
           segment.style.width = `${Math.max(0.6, timeToTimelinePct(workout.end_sec) - timeToTimelinePct(workout.start_sec))}%`;
           segment.style.background = palette[index % palette.length];
+          segment.addEventListener("pointerdown", (event) => event.stopPropagation());
+          segment.addEventListener("click", (event) => {
+            event.stopPropagation();
+            selectWorkoutComparison(workout);
+          });
           els.workoutTrack.appendChild(segment);
           (workout.reps || []).forEach((rep) => {
             if (rep.end_sec < visible.startSec || rep.start_sec > visible.endSec) return;
@@ -4714,17 +4921,30 @@
           host.innerHTML = "<div class='workout'><strong>No workout analysis found</strong><br><small>The skeleton still loads from pose_debug.smpl.jsonl.</small></div>";
           return;
         }
-        host.innerHTML = workouts.map((workout) => `
-          <div class="workout">
+        host.innerHTML = workouts.map((workout) => {
+          const key = workoutKey(workout);
+          const comparison = comparisonForWorkout(workout);
+          return `
+          <div class="workout ${state.selectedWorkoutKey === key ? "is-selected" : ""}" data-workout-key="${escapeHtml(key)}">
             <div class="workout-top">
-              <strong>${workout.display_label || workout.label}</strong>
+              <strong>${escapeHtml(workout.display_label || workout.label)}</strong>
               <small>${workout.rep_count || 0} reps | confidence ${fmt(workout.confidence, 2)}</small>
             </div>
             <div class="rep-list">
-              ${(workout.reps || []).map((rep) => `<span class="rep-chip">rep ${rep.index}: ${fmt(rep.start_sec, 1)}-${fmt(rep.end_sec, 1)}s | ${rep.dominant_side || "side ?"}</span>`).join("")}
+              ${(workout.reps || []).map((rep) => `<span class="rep-chip">rep ${rep.index}: ${fmt(rep.start_sec, 1)}-${fmt(rep.end_sec, 1)}s | ${escapeHtml(rep.dominant_side || "side ?")}</span>`).join("")}
+            </div>
+            <div class="comparison-actions" style="margin-top:10px">
+              <button class="button ghost" type="button" data-compare-workout="${escapeHtml(key)}">${comparison ? "Compare closest match" : "No match yet"}</button>
             </div>
           </div>
-        `).join("");
+        `;
+        }).join("");
+        host.querySelectorAll("[data-compare-workout]").forEach((button) => {
+          button.addEventListener("click", () => {
+            const workout = workouts.find((item) => workoutKey(item) === button.dataset.compareWorkout);
+            if (workout) selectWorkoutComparison(workout);
+          });
+        });
       }
 
       function resize() {
@@ -4844,6 +5064,7 @@
         state.metadata = metadata;
         state.reviewPackage = reviewPackage;
         state.analysis = analysisFromReviewPackage(reviewPackage, analysis);
+        await loadComparisons();
         const packageVideo = reviewPackage?.video || {};
         els.video.src = packageVideo.browser_smpl_preview || packageVideo.smpl_preview || VIDEO_URL;
         state.bounds = computeBounds(state.frames);
@@ -5145,6 +5366,16 @@
       els.selectionFocusBtn.addEventListener("click", focusSelection);
       els.selectionClearBtn.addEventListener("click", () => setSelectedAnatomy(null));
       els.romExitBtn.addEventListener("click", exitRomAnalysis);
+      els.comparisonCloseBtn.addEventListener("click", () => {
+        state.selectedComparison = null;
+        state.selectedWorkoutKey = "";
+        els.comparisonContext.hidden = true;
+        renderTimeline();
+        renderWorkouts();
+      });
+      els.comparisonContext.querySelectorAll("[data-comparison-rating]").forEach((button) => {
+        button.addEventListener("click", () => submitComparisonFeedback(button.dataset.comparisonRating));
+      });
 
       els.addNoteBtn.addEventListener("click", () => {
         setNoteMenuOpen(els.noteMenu.hidden);
