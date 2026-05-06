@@ -1629,31 +1629,31 @@
 
       .review-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 8px;
         overflow: visible;
       }
 
       .metric-cluster {
         min-width: 0;
-        border: 1px solid rgba(23, 23, 23, 0.12);
-        background: rgba(255, 255, 255, 0.64);
+        border: 1px solid rgba(23, 23, 23, 0.18);
+        background: #ffffff;
         align-self: start;
       }
 
       .metric-cluster[open] {
-        grid-column: span 2;
+        border-color: rgba(194, 65, 12, 0.55);
+        background: rgba(255, 247, 237, 0.92);
       }
 
       .metric-cluster summary {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto;
         gap: 3px;
-        min-height: 50px;
-        padding: 9px;
+        min-height: 58px;
+        padding: 10px;
         cursor: pointer;
         list-style: none;
-        border-bottom: 1px solid rgba(23, 23, 23, 0.1);
       }
 
       .metric-cluster summary::-webkit-details-marker {
@@ -1662,7 +1662,7 @@
 
       .metric-cluster summary strong {
         color: var(--ink);
-        font-size: 12px;
+        font-size: 13px;
         line-height: 1.15;
       }
 
@@ -1675,37 +1675,56 @@
       }
 
       .metric-cluster summary::after {
-        content: "+";
+        content: "";
+        width: 8px;
+        height: 8px;
+        border: 1px solid rgba(23, 23, 23, 0.45);
+        background: #ffffff;
         grid-row: 1 / span 2;
         grid-column: 2;
         align-self: center;
         justify-self: end;
-        color: var(--amber);
-        font-weight: 950;
       }
 
       .metric-cluster[open] summary::after {
-        content: "-";
+        border-color: var(--amber);
+        background: var(--amber);
       }
 
       .cluster-cells {
+        display: none;
+      }
+
+      .metric-detail-host {
+        min-height: 154px;
+        border: 1px solid rgba(194, 65, 12, 0.32);
+        border-left: 4px solid var(--amber);
+        background: rgba(255, 247, 237, 0.72);
+        padding: 10px;
+      }
+
+      .metric-panel {
+        display: none;
+      }
+
+      .metric-panel.active {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 6px;
-        padding: 8px;
+        grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+        gap: 8px;
       }
 
       .review-cell {
-        min-height: 62px;
-        border: 1px solid rgba(23, 23, 23, 0.1);
-        padding: 8px;
-        background: rgba(255, 255, 255, 0.56);
+        min-height: 72px;
+        border: 1px solid rgba(23, 23, 23, 0.18);
+        padding: 10px;
+        background: #ffffff;
       }
 
       .review-cell strong {
         display: block;
         color: var(--ink);
-        font-size: 13px;
+        font-size: 16px;
+        line-height: 1.12;
       }
 
       .review-cell span {
@@ -2992,6 +3011,7 @@
                 </div>
               </details>
             </div>
+            <div id="metricDetailHost" class="metric-detail-host" aria-live="polite"></div>
           </div>
         </article>
       </section>
@@ -3264,17 +3284,34 @@
       };
       document.querySelector(".stage-card")?.appendChild(els.measurementTray);
       const metricClusters = [...document.querySelectorAll(".metric-cluster")];
-      let openedMetricCluster = metricClusters.find((cluster) => cluster.open);
+      const metricDetailHost = document.getElementById("metricDetailHost");
+      const metricPanels = metricClusters.map((cluster, index) => {
+        const title = cluster.querySelector("summary strong")?.textContent || `Cluster ${index + 1}`;
+        const key = String(title).toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "") || `metric_${index}`;
+        const cells = cluster.querySelector(".cluster-cells");
+        const panel = document.createElement("div");
+        panel.className = "metric-panel";
+        panel.dataset.metricPanel = key;
+        while (cells?.firstChild) panel.appendChild(cells.firstChild);
+        cells?.remove();
+        metricDetailHost.appendChild(panel);
+        cluster.dataset.metricPanel = key;
+        return { cluster, panel };
+      });
+      function setActiveMetricCluster(activeCluster) {
+        metricPanels.forEach(({ cluster, panel }) => {
+          const active = cluster === activeCluster;
+          cluster.open = active;
+          panel.classList.toggle("active", active);
+        });
+      }
       metricClusters.forEach((cluster) => {
-        if (cluster.open && cluster !== openedMetricCluster) cluster.open = false;
-        cluster.addEventListener("toggle", () => {
-          if (!cluster.open) return;
-          openedMetricCluster = cluster;
-          metricClusters.forEach((candidate) => {
-            if (candidate !== cluster) candidate.open = false;
-          });
+        cluster.querySelector("summary")?.addEventListener("click", (event) => {
+          event.preventDefault();
+          setActiveMetricCluster(cluster);
         });
       });
+      setActiveMetricCluster(metricClusters.find((cluster) => cluster.open) || metricClusters[0]);
 
       const vec = (point) => [Number(point[0]), Number(point[1]), Number(point[2])];
       const add = (a, b) => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
