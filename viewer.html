@@ -1520,6 +1520,84 @@
         gap: 6px;
       }
 
+      .measurement-object {
+        display: grid;
+        gap: 8px;
+        border: 1px solid rgba(194, 65, 12, 0.22);
+        border-left: 4px solid var(--amber);
+        padding: 10px;
+        background: rgba(255, 247, 237, 0.72);
+      }
+
+      .measurement-object-top,
+      .window-meta,
+      .window-stats {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .measurement-object-top strong {
+        color: var(--ink);
+        font-size: 14px;
+        line-height: 1.15;
+      }
+
+      .scope-chip {
+        border: 1px solid rgba(194, 65, 12, 0.28);
+        padding: 4px 7px;
+        background: rgba(255, 255, 255, 0.62);
+        color: var(--amber);
+        font-size: 10px;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .measurement-window {
+        display: grid;
+        gap: 5px;
+      }
+
+      .window-track {
+        position: relative;
+        height: 18px;
+        border: 1px solid rgba(23, 23, 23, 0.14);
+        background:
+          repeating-linear-gradient(90deg, rgba(23, 23, 23, 0.08) 0 1px, transparent 1px 20%),
+          rgba(255, 255, 255, 0.76);
+        overflow: hidden;
+      }
+
+      .window-fill {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(194, 65, 12, 0.20);
+        border-left: 2px solid var(--amber);
+        border-right: 2px solid var(--amber);
+      }
+
+      .window-playhead {
+        position: absolute;
+        top: -2px;
+        bottom: -2px;
+        width: 2px;
+        background: #171717;
+      }
+
+      .window-meta,
+      .window-stats {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 850;
+        line-height: 1.3;
+      }
+
       .review-grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2619,7 +2697,7 @@
                   <div class="rom-metric"><strong id="romArcValue">--</strong><span>active ROM</span></div>
                   <div class="rom-metric"><strong id="romPeakValue">--</strong><span>peak in rep</span></div>
                   <div class="rom-metric"><strong id="romConsistencyValue">--</strong><span>rep consistency</span></div>
-                  <div class="rom-metric"><strong id="romFrameValue">--</strong><span>current frame</span></div>
+                  <div class="rom-metric"><strong id="romFrameValue">--</strong><span>playhead time</span></div>
                 </div>
                 <div id="romNote" class="rom-note">Rep-to-rep consistency is reported as ROM standard deviation across detected reps for this movement.</div>
                 <div class="measurement-review">
@@ -2628,6 +2706,23 @@
                     <span id="chartabilityChip" class="chartability-chip caution">Review</span>
                   </div>
                   <div id="chartabilityReasons" class="reason-list"></div>
+                  <div class="measurement-object">
+                    <div class="measurement-object-top">
+                      <span id="selectionScopeChip" class="scope-chip">selected window</span>
+                      <strong id="selectedObjectTitle">No bounded selection</strong>
+                    </div>
+                    <div class="measurement-window">
+                      <div class="window-track" aria-label="Selected measurement window">
+                        <span id="selectedWindowFill" class="window-fill"></span>
+                        <span id="selectedWindowPlayhead" class="window-playhead"></span>
+                      </div>
+                      <div class="window-meta">
+                        <span id="selectedObjectRange">--</span>
+                        <span id="selectedObjectFrame">--</span>
+                      </div>
+                    </div>
+                    <div id="selectedObjectStats" class="window-stats">Window metrics update after selecting a rep.</div>
+                  </div>
                   <div class="review-grid">
                     <div class="review-cell"><strong id="jointVisibilityValue">--</strong><span>joint visibility</span></div>
                     <div class="review-cell"><strong id="modelConfidenceValue">--</strong><span>model confidence</span></div>
@@ -2923,6 +3018,13 @@
         romExitBtn: document.getElementById("romExitBtn"),
         chartabilityChip: document.getElementById("chartabilityChip"),
         chartabilityReasons: document.getElementById("chartabilityReasons"),
+        selectionScopeChip: document.getElementById("selectionScopeChip"),
+        selectedObjectTitle: document.getElementById("selectedObjectTitle"),
+        selectedWindowFill: document.getElementById("selectedWindowFill"),
+        selectedWindowPlayhead: document.getElementById("selectedWindowPlayhead"),
+        selectedObjectRange: document.getElementById("selectedObjectRange"),
+        selectedObjectFrame: document.getElementById("selectedObjectFrame"),
+        selectedObjectStats: document.getElementById("selectedObjectStats"),
         jointVisibilityValue: document.getElementById("jointVisibilityValue"),
         modelConfidenceValue: document.getElementById("modelConfidenceValue"),
         kinematicConsistencyValue: document.getElementById("kinematicConsistencyValue"),
@@ -4634,6 +4736,35 @@
         els.chartabilityReasons.innerHTML = result.reasons.map((reason) => `<span class="reason-chip">${escapeHtml(reason)}</span>`).join("");
       }
 
+      function renderSelectedMeasurementWindow(analysis, consistency, dose, frame = state.frames[state.frameIndex]) {
+        const workout = analysis?.workout;
+        const rep = analysis?.rep;
+        const metric = analysis?.metric;
+        if (!workout || !rep) return;
+        const workoutLabel = workout.display_label || workout.label || "Movement";
+        const repStart = Number(rep.start_sec);
+        const repEnd = Number(rep.end_sec);
+        const contextStart = Number(workout.start_sec);
+        const contextEnd = Number(workout.end_sec);
+        const contextSpan = Math.max(0.001, contextEnd - contextStart);
+        const fillLeft = Math.max(0, Math.min(100, ((repStart - contextStart) / contextSpan) * 100));
+        const fillRight = Math.max(0, Math.min(100, ((repEnd - contextStart) / contextSpan) * 100));
+        const playhead = Math.max(0, Math.min(100, (((frame?.t ?? repStart) - contextStart) / contextSpan) * 100));
+        els.selectionScopeChip.textContent = "rep window";
+        els.selectedObjectTitle.textContent = `${workoutLabel} | rep ${rep.index} | ${metric?.label || "measured angle"}`;
+        els.selectedWindowFill.style.left = `${fillLeft}%`;
+        els.selectedWindowFill.style.width = `${Math.max(0.75, fillRight - fillLeft)}%`;
+        els.selectedWindowPlayhead.style.left = `${playhead}%`;
+        els.selectedObjectRange.textContent = `selected ${fmt(repStart, 2)}-${fmt(repEnd, 2)}s inside set ${fmt(contextStart, 2)}-${fmt(contextEnd, 2)}s`;
+        els.selectedObjectFrame.textContent = `playhead ${frame ? fmt(frame.t, 2) : "--"}s`;
+        els.selectedObjectStats.textContent = [
+          Number.isFinite(analysis.rom) ? `ROM ${fmt(analysis.rom, 1)} deg` : "",
+          Number.isFinite(consistency?.sdRom) ? `set SD ${fmt(consistency.sdRom, 1)} deg` : "",
+          Number.isFinite(dose?.repCount) ? `${dose.repCount} reps` : "",
+          Number.isFinite(dose?.activeTime) ? `${secondsValue(dose.activeTime)} active` : ""
+        ].filter(Boolean).join(" | ");
+      }
+
       function measurementSnippet(analysis, chartability, consistency, sideComparison = null, compensation = null, drift = null, progression = null, dose = null) {
         const workout = analysis.workout?.display_label || analysis.workout?.label || "movement";
         const rep = analysis.rep?.index ?? "?";
@@ -5746,6 +5877,7 @@
           ? `Rep-to-rep consistency: mean ROM ${fmt(consistency.meanRom, 1)} deg, SD +/-${fmt(consistency.sdRom, 1)} deg across ${consistency.analyses.length} reps. Max flexion uses ${flexionDescriptor}.`
           : `Max flexion uses ${flexionDescriptor}. Add more bounded reps to calculate rep-to-rep ROM consistency.`;
         setChartabilityChip(chartability);
+        renderSelectedMeasurementWindow(analysis, consistency, dose, frame);
         els.jointVisibilityValue.textContent = chartPercent(chartability.jointVisibility);
         els.modelConfidenceValue.textContent = chartPercent(chartability.modelConfidence);
         els.kinematicConsistencyValue.textContent = chartPercent(chartability.kinematicConsistency);
