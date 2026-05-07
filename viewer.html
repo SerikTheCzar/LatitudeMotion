@@ -1709,7 +1709,7 @@
 
       .metric-panel.active {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 8px;
       }
 
@@ -1718,6 +1718,14 @@
         border: 1px solid rgba(23, 23, 23, 0.18);
         padding: 10px;
         background: #ffffff;
+      }
+
+      .comparison-review-cell {
+        min-height: 98px;
+      }
+
+      .notable-review-cell {
+        grid-column: span 2;
       }
 
       .review-cell strong {
@@ -1730,7 +1738,11 @@
       .review-cell strong .rep-object-row {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 6px;
+        gap: 8px;
+      }
+
+      .review-cell strong .rep-object-row.single {
+        grid-template-columns: minmax(0, 1fr);
       }
 
       .review-cell strong .rep-object {
@@ -1762,8 +1774,6 @@
         color: var(--ink);
         font-size: 13px;
         line-height: 1.1;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
 
       .review-cell strong .rep-object small {
@@ -1774,15 +1784,15 @@
       }
 
       .review-cell strong .notable-rep-list {
-        display: flex;
-        flex-wrap: wrap;
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 6px;
       }
 
       .review-cell strong .notable-rep {
         display: inline-grid;
         gap: 2px;
-        min-width: 78px;
+        min-width: 0;
         border: 1px solid rgba(23, 23, 23, 0.14);
         padding: 6px 7px;
         background: rgba(255, 255, 255, 0.78);
@@ -3070,7 +3080,7 @@
                 <div class="cluster-cells">
                   <div class="review-cell"><strong id="meanRomValue">--</strong><span>set mean ROM</span></div>
                   <div class="review-cell"><strong id="romSdValue">--</strong><span>set ROM SD</span></div>
-                  <div class="review-cell"><strong id="bestWorstRepValue">--</strong><span>set high / low ROM</span></div>
+                  <div class="review-cell comparison-review-cell"><strong id="bestWorstRepValue">--</strong><span>set high / low ROM</span></div>
                   <div class="review-cell"><strong id="repTempoValue">--</strong><span>rep time mean / set SD</span></div>
                   <div class="review-cell"><strong id="robustSpeedValue">--</strong><span>median / p95 speed</span></div>
                   <div class="review-cell"><strong id="endpointJitterValue">--</strong><span>endpoint jitter</span></div>
@@ -3113,9 +3123,9 @@
                   <div class="review-cell"><strong id="tempoDriftValue">--</strong><span>set time drift</span></div>
                   <div class="review-cell"><strong id="speedDriftValue">--</strong><span>set speed drift</span></div>
                   <div class="review-cell"><strong id="endpointDriftValue">--</strong><span>endpoint timing drift</span></div>
-                  <div class="review-cell"><strong id="lowestConfidenceRepValue">--</strong><span>lowest-confidence rep</span></div>
-                  <div class="review-cell"><strong id="mostDifferentRepValue">--</strong><span>most different ROM rep</span></div>
-                  <div class="review-cell"><strong id="notableRepsValue">--</strong><span>notable reps</span></div>
+                  <div class="review-cell comparison-review-cell"><strong id="lowestConfidenceRepValue">--</strong><span>lowest-confidence rep</span></div>
+                  <div class="review-cell comparison-review-cell"><strong id="mostDifferentRepValue">--</strong><span>most different ROM rep</span></div>
+                  <div class="review-cell notable-review-cell"><strong id="notableRepsValue">--</strong><span>notable reps</span></div>
                 </div>
               </details>
               <details class="metric-cluster">
@@ -5053,7 +5063,7 @@
       function repObjectRow(items) {
         const valid = (items || []).filter(Boolean);
         if (!valid.length) return "--";
-        return `<span class="rep-object-row">${valid.map((item) => repObject(item.label, item.repIndex, item.value)).join("")}</span>`;
+        return `<span class="rep-object-row${valid.length === 1 ? " single" : ""}">${valid.map((item) => repObject(item.label, item.repIndex, item.value)).join("")}</span>`;
       }
 
       function notableRepList(items) {
