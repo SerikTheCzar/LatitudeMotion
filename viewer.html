@@ -1727,6 +1727,87 @@
         line-height: 1.12;
       }
 
+      .review-cell strong .rep-object-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .review-cell strong .rep-object {
+        display: grid;
+        gap: 2px;
+        min-width: 0;
+        border: 1px solid rgba(23, 23, 23, 0.14);
+        padding: 7px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .review-cell strong .rep-object em,
+      .review-cell strong .rep-object b,
+      .review-cell strong .rep-object small {
+        display: block;
+        font-style: normal;
+      }
+
+      .review-cell strong .rep-object em {
+        color: var(--amber);
+        font-size: 9px;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .review-cell strong .rep-object b {
+        overflow: hidden;
+        color: var(--ink);
+        font-size: 13px;
+        line-height: 1.1;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .review-cell strong .rep-object small {
+        color: var(--muted);
+        font-size: 10px;
+        font-weight: 850;
+        line-height: 1.15;
+      }
+
+      .review-cell strong .notable-rep-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .review-cell strong .notable-rep {
+        display: inline-grid;
+        gap: 2px;
+        min-width: 78px;
+        border: 1px solid rgba(23, 23, 23, 0.14);
+        padding: 6px 7px;
+        background: rgba(255, 255, 255, 0.78);
+      }
+
+      .review-cell strong .notable-rep b,
+      .review-cell strong .notable-rep small {
+        display: block;
+      }
+
+      .review-cell strong .notable-rep b {
+        color: var(--ink);
+        font-size: 12px;
+        line-height: 1.05;
+      }
+
+      .review-cell strong .notable-rep small {
+        color: var(--muted);
+        font-size: 9px;
+        font-weight: 950;
+        letter-spacing: 0.06em;
+        line-height: 1.05;
+        text-transform: uppercase;
+      }
+
       .review-cell span {
         display: block;
         margin-top: 4px;
@@ -2976,7 +3057,7 @@
             </div>
             <div class="review-grid" aria-label="Selected measurement details">
               <details class="metric-cluster" open>
-                <summary><strong>Trust</strong><span>chartability inputs</span></summary>
+                <summary><strong>Trust</strong><span>selected-rep quality</span></summary>
                 <div class="cluster-cells">
                   <div class="review-cell"><strong id="jointVisibilityValue">--</strong><span>joint visibility</span></div>
                   <div class="review-cell"><strong id="modelConfidenceValue">--</strong><span>model confidence</span></div>
@@ -2985,28 +3066,28 @@
                 </div>
               </details>
               <details class="metric-cluster" open>
-                <summary><strong>ROM + Tempo</strong><span>set shape</span></summary>
+                <summary><strong>ROM + Tempo</strong><span>set-level shape</span></summary>
                 <div class="cluster-cells">
-                  <div class="review-cell"><strong id="meanRomValue">--</strong><span>mean ROM</span></div>
-                  <div class="review-cell"><strong id="romSdValue">--</strong><span>ROM SD</span></div>
-                  <div class="review-cell"><strong id="bestWorstRepValue">--</strong><span>best / lowest ROM</span></div>
-                  <div class="review-cell"><strong id="repTempoValue">--</strong><span>rep time mean / SD</span></div>
+                  <div class="review-cell"><strong id="meanRomValue">--</strong><span>set mean ROM</span></div>
+                  <div class="review-cell"><strong id="romSdValue">--</strong><span>set ROM SD</span></div>
+                  <div class="review-cell"><strong id="bestWorstRepValue">--</strong><span>set high / low ROM</span></div>
+                  <div class="review-cell"><strong id="repTempoValue">--</strong><span>rep time mean / set SD</span></div>
                   <div class="review-cell"><strong id="robustSpeedValue">--</strong><span>median / p95 speed</span></div>
                   <div class="review-cell"><strong id="endpointJitterValue">--</strong><span>endpoint jitter</span></div>
                 </div>
               </details>
               <details class="metric-cluster">
-                <summary><strong>Phase Control</strong><span>within-rep timing</span></summary>
+                <summary><strong>Phase Control</strong><span>selected-rep timing</span></summary>
                 <div class="cluster-cells">
-                  <div class="review-cell"><strong id="toEndpointValue">--</strong><span>to endpoint</span></div>
+                  <div class="review-cell"><strong id="toEndpointValue">--</strong><span>effort phase</span></div>
                   <div class="review-cell"><strong id="returnPhaseValue">--</strong><span>return phase</span></div>
-                  <div class="review-cell"><strong id="phaseRatioValue">--</strong><span>phase ratio</span></div>
-                  <div class="review-cell"><strong id="endpointDwellValue">--</strong><span>endpoint dwell</span></div>
-                  <div class="review-cell"><strong id="reversalSmoothnessValue">--</strong><span>reversal smoothness</span></div>
+                  <div class="review-cell"><strong id="phaseRatioValue">--</strong><span>effort / return split</span></div>
+                  <div class="review-cell"><strong id="endpointDwellValue">--</strong><span>pause at end</span></div>
+                  <div class="review-cell"><strong id="reversalSmoothnessValue">--</strong><span>turnaround smoothness</span></div>
                 </div>
               </details>
               <details class="metric-cluster">
-                <summary><strong>Side To Side</strong><span>bilateral context</span></summary>
+                <summary><strong>Side To Side</strong><span>when bilateral</span></summary>
                 <div class="cluster-cells">
                   <div class="review-cell"><strong id="selectedSideRomValue">--</strong><span>selected-side ROM</span></div>
                   <div class="review-cell"><strong id="oppositeSideRomValue">--</strong><span>opposite-side ROM</span></div>
@@ -3026,7 +3107,7 @@
                 </div>
               </details>
               <details class="metric-cluster">
-                <summary><strong>Set Drift</strong><span>notable reps</span></summary>
+                <summary><strong>Set Drift</strong><span>set-level change</span></summary>
                 <div class="cluster-cells">
                   <div class="review-cell"><strong id="romDriftValue">--</strong><span>set ROM drift</span></div>
                   <div class="review-cell"><strong id="tempoDriftValue">--</strong><span>set time drift</span></div>
@@ -3038,7 +3119,7 @@
                 </div>
               </details>
               <details class="metric-cluster">
-                <summary><strong>History</strong><span>same-patient context</span></summary>
+                <summary><strong>History</strong><span>cross-session context</span></summary>
                 <div class="cluster-cells">
                   <div class="review-cell"><strong id="historyCountValue">--</strong><span>matched history</span></div>
                   <div class="review-cell"><strong id="priorRomValue">--</strong><span>prior workout avg</span></div>
@@ -3049,14 +3130,14 @@
                 </div>
               </details>
               <details class="metric-cluster">
-                <summary><strong>Dose</strong><span>work completed</span></summary>
+                <summary><strong>Dose</strong><span>set-level work</span></summary>
                 <div class="cluster-cells">
                   <div class="review-cell"><strong id="setDoseValue">--</strong><span>set reps</span></div>
                   <div class="review-cell"><strong id="activeTimeValue">--</strong><span>active time</span></div>
                   <div class="review-cell"><strong id="gapTimeValue">--</strong><span>gap / rest time</span></div>
                   <div class="review-cell"><strong id="setDurationValue">--</strong><span>set duration</span></div>
                   <div class="review-cell"><strong id="romVolumeValue">--</strong><span>ROM volume</span></div>
-                  <div class="review-cell"><strong id="repDensityValue">--</strong><span>rep density</span></div>
+                  <div class="review-cell"><strong id="repDensityValue">--</strong><span>reps per minute</span></div>
                 </div>
               </details>
             </div>
@@ -4808,6 +4889,15 @@
             Math.abs(analysis.rom - consistency.meanRom) > Math.abs(most.rom - consistency.meanRom) ? analysis : most
           ), analyses[0])
           : null;
+        const notableItems = [
+          consistency.bestRep ? { label: "max ROM", rep: consistency.bestRep.rep.index, value: `${fmt(consistency.bestRep.rom, 1)} deg` } : null,
+          consistency.worstRep ? { label: "min ROM", rep: consistency.worstRep.rep.index, value: `${fmt(consistency.worstRep.rom, 1)} deg` } : null,
+          consistency.slowestRep ? { label: "slowest", rep: consistency.slowestRep.rep.index, value: secondsValue(consistency.slowestRep.duration) } : null,
+          lowestConfidence ? { label: "lowest conf", rep: lowestConfidence.rep.index, value: chartPercent(lowestConfidence.meanConfidence) } : null,
+          mostDifferentRom && Number.isFinite(consistency?.meanRom)
+            ? { label: "ROM outlier", rep: mostDifferentRom.rep.index, value: signedDegrees(mostDifferentRom.rom - consistency.meanRom) }
+            : null
+        ].filter(Boolean);
         return {
           first,
           last,
@@ -4817,13 +4907,8 @@
           endpointTimingDrift: Number.isFinite(last.phases?.toEndpoint) && Number.isFinite(first.phases?.toEndpoint) ? last.phases.toEndpoint - first.phases.toEndpoint : null,
           lowestConfidence,
           mostDifferentRom,
-          notableLabels: [
-            consistency.bestRep ? `max ROM r${consistency.bestRep.rep.index}` : "",
-            consistency.worstRep ? `min ROM r${consistency.worstRep.rep.index}` : "",
-            consistency.slowestRep ? `slow r${consistency.slowestRep.rep.index}` : "",
-            lowestConfidence ? `low conf r${lowestConfidence.rep.index}` : "",
-            mostDifferentRom ? `outlier r${mostDifferentRom.rep.index}` : ""
-          ].filter(Boolean)
+          notableItems,
+          notableLabels: notableItems.map((item) => `${item.label} r${item.rep}`)
         };
       }
 
@@ -4913,8 +4998,8 @@
         const kinematicConsistency = Math.max(0, Math.min(1, 1 - ((jitterPenalty * 0.35) + (spikePenalty * 0.28) + (consistencyPenalty * 0.18) + (reversalPenalty * 0.19))));
         const measurementConfidence = Math.max(0, Math.min(1, (jointVisibility * 0.32) + (modelConfidence * 0.32) + (kinematicConsistency * 0.36)));
 
-        if (jointVisibility < 0.72) reasons.push("low visibility");
-        if (modelConfidence < 0.62) reasons.push("low model confidence");
+        if (jointVisibility < 0.8) reasons.push("visibility below 80%");
+        if (modelConfidence < 0.8) reasons.push("model confidence below 80%");
         if (analysis.expectedFrames < 8 || analysis.samples.length < 6) reasons.push("insufficient frames");
         if (Number.isFinite(analysis.endpointJitter) && analysis.endpointJitter > 8) reasons.push("high jitter");
         if (Number.isFinite(analysis.derivativeSpikeRatio) && analysis.derivativeSpikeRatio > 2.6) reasons.push("abnormal derivative spike");
@@ -4924,13 +5009,13 @@
 
         let status = "Chartable";
         let className = "chartable";
-        if (measurementConfidence < 0.42 || reasons.includes("insufficient frames")) {
+        if (measurementConfidence < 0.42 || jointVisibility < 0.5 || modelConfidence < 0.5 || reasons.includes("insufficient frames")) {
           status = "Not reliable";
           className = "unreliable";
-        } else if (measurementConfidence < 0.58 || reasons.length >= 3) {
+        } else if (measurementConfidence < 0.55 || jointVisibility < 0.65 || modelConfidence < 0.65) {
           status = "Review required";
           className = "review";
-        } else if (measurementConfidence < 0.76 || reasons.length) {
+        } else if (jointVisibility < 0.8 || modelConfidence < 0.8) {
           status = "Use with caution";
           className = "caution";
         }
@@ -4953,6 +5038,37 @@
       function repLabel(analysis, suffix = "") {
         if (!analysis?.rep) return "--";
         return `rep ${analysis.rep.index}${suffix}`;
+      }
+
+      function repObject(label, repIndex, value) {
+        return `
+          <span class="rep-object">
+            <em>${escapeHtml(label)}</em>
+            <b>rep ${escapeHtml(repIndex ?? "?")}</b>
+            <small>${escapeHtml(value || "--")}</small>
+          </span>
+        `;
+      }
+
+      function repObjectRow(items) {
+        const valid = (items || []).filter(Boolean);
+        if (!valid.length) return "--";
+        return `<span class="rep-object-row">${valid.map((item) => repObject(item.label, item.repIndex, item.value)).join("")}</span>`;
+      }
+
+      function notableRepList(items) {
+        const valid = (items || []).filter(Boolean);
+        if (!valid.length) return "--";
+        return `
+          <span class="notable-rep-list">
+            ${valid.map((item) => `
+              <span class="notable-rep">
+                <b>rep ${escapeHtml(item.rep ?? "?")}</b>
+                <small>${escapeHtml(item.label)}${item.value ? ` | ${escapeHtml(item.value)}` : ""}</small>
+              </span>
+            `).join("")}
+          </span>
+        `;
       }
 
       function secondsValue(value) {
@@ -6176,8 +6292,11 @@
         els.measurementConfidenceValue.textContent = chartPercent(chartability.measurementConfidence);
         els.meanRomValue.textContent = Number.isFinite(consistency.meanRom) ? `${fmt(consistency.meanRom, 1)} deg` : "--";
         els.romSdValue.textContent = Number.isFinite(consistency.sdRom) ? `${fmt(consistency.sdRom, 1)} deg` : "--";
-        els.bestWorstRepValue.textContent = consistency.bestRep && consistency.worstRep
-          ? `rep ${consistency.bestRep.rep.index} ${fmt(consistency.bestRep.rom, 1)} / rep ${consistency.worstRep.rep.index} ${fmt(consistency.worstRep.rom, 1)}`
+        els.bestWorstRepValue.innerHTML = consistency.bestRep && consistency.worstRep
+          ? repObjectRow([
+            { label: "high ROM", repIndex: consistency.bestRep.rep.index, value: `${fmt(consistency.bestRep.rom, 1)} deg` },
+            { label: "low ROM", repIndex: consistency.worstRep.rep.index, value: `${fmt(consistency.worstRep.rom, 1)} deg` }
+          ])
           : "--";
         els.repTempoValue.textContent = Number.isFinite(consistency.meanDuration)
           ? `${fmt(consistency.meanDuration, 2)}s / ${Number.isFinite(consistency.sdDuration) ? fmt(consistency.sdDuration, 2) : "--"}s`
@@ -6189,7 +6308,7 @@
         els.toEndpointValue.textContent = secondsValue(analysis.phases?.toEndpoint);
         els.returnPhaseValue.textContent = secondsValue(analysis.phases?.returnPhase);
         els.phaseRatioValue.textContent = Number.isFinite(analysis.phases?.phaseRatioA) && Number.isFinite(analysis.phases?.phaseRatioB)
-          ? `${fmt(analysis.phases.phaseRatioA * 100, 0)} / ${fmt(analysis.phases.phaseRatioB * 100, 0)}`
+          ? `${fmt(analysis.phases.phaseRatioA * 100, 0)}% / ${fmt(analysis.phases.phaseRatioB * 100, 0)}%`
           : "--";
         els.endpointDwellValue.textContent = secondsValue(analysis.phases?.endpointDwell);
         els.reversalSmoothnessValue.textContent = chartPercent(analysis.phases?.reversalSmoothness);
@@ -6211,13 +6330,13 @@
         els.tempoDriftValue.textContent = signedSeconds(drift?.durationDrift);
         els.speedDriftValue.textContent = signedSpeed(drift?.speedDrift);
         els.endpointDriftValue.textContent = signedSeconds(drift?.endpointTimingDrift);
-        els.lowestConfidenceRepValue.textContent = drift?.lowestConfidence
-          ? repLabel(drift.lowestConfidence, ` ${chartPercent(drift.lowestConfidence.meanConfidence)}`)
+        els.lowestConfidenceRepValue.innerHTML = drift?.lowestConfidence
+          ? repObjectRow([{ label: "lowest confidence", repIndex: drift.lowestConfidence.rep.index, value: chartPercent(drift.lowestConfidence.meanConfidence) }])
           : "--";
-        els.mostDifferentRepValue.textContent = drift?.mostDifferentRom && Number.isFinite(consistency.meanRom)
-          ? repLabel(drift.mostDifferentRom, ` ${signedDegrees(drift.mostDifferentRom.rom - consistency.meanRom)}`)
+        els.mostDifferentRepValue.innerHTML = drift?.mostDifferentRom && Number.isFinite(consistency.meanRom)
+          ? repObjectRow([{ label: "from set mean", repIndex: drift.mostDifferentRom.rep.index, value: signedDegrees(drift.mostDifferentRom.rom - consistency.meanRom) }])
           : "--";
-        els.notableRepsValue.textContent = drift?.notableLabels?.length ? drift.notableLabels.join(" / ") : "--";
+        els.notableRepsValue.innerHTML = notableRepList(drift?.notableItems);
         els.historyCountValue.textContent = Number.isFinite(progression?.count) ? `${progression.count}` : "--";
         els.priorRomValue.textContent = progression?.prior
           ? `${fmt(progression.prior.rom, 1)} deg ${shortComparisonSession(progression.prior.session)}`
@@ -6233,7 +6352,7 @@
         els.gapTimeValue.textContent = secondsValue(dose?.gapTime);
         els.setDurationValue.textContent = secondsValue(dose?.setDuration);
         els.romVolumeValue.textContent = Number.isFinite(dose?.romVolume) ? `${fmt(dose.romVolume, 0)} deg` : "--";
-        els.repDensityValue.textContent = Number.isFinite(dose?.repDensity) ? `${fmt(dose.repDensity, 1)}/min` : "--";
+        els.repDensityValue.textContent = Number.isFinite(dose?.repDensity) ? `${fmt(dose.repDensity, 1)} reps/min` : "--";
         els.noteSnippet.innerHTML = renderMeasurementSummary(analysis, chartability, consistency, dose);
         drawRepOverlay(workout, rep);
       }
